@@ -2,32 +2,58 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const axios = require('axios');
 const minimatch = require('minimatch');
+const parseDiff = require('parse-diff');
+const fs = require('fs');
 
 async function run() {
     try {
         // Get input values from action.yml
         const githubToken = core.getInput('GITHUB_TOKEN');
         const openaiApiKey = core.getInput('OPENAI_API_KEY');
-        const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4o-mini';
+        const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4';
         const excludePatterns = core.getInput('exclude').split(',').map(p => p.trim());
 
         const octokit = github.getOctokit(githubToken);
         const { context } = github;
-        const prNumber = context.payload.pull_request.number;
+
+        // Load the event data to retrieve pull request details
+        const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH || '', 'utf8'));
         const repo = context.repo;
+
+        // Get PR number and details
+        const prNumber = eventData.pull_request ? eventData.pull_request.number : null;
+        if (!prNumber) {
+            core.setFailed('Pull request number not found.');
+            return;
+        }
 
         core.info(`Reviewing PR #${prNumber} in repo ${repo.owner}/${repo.repo}`);
 
-        // Get changed files in the PR
-        const { data: files } = await octokit.rest.pulls.listFiles({
+        // Get PR details (title and description)
+        const prResponse = await octokit.rest.pulls.get({
             owner: repo.owner,
             repo: repo.repo,
             pull_number: prNumber
         });
+        const prDetails = {
+            title: prResponse.data.title || '',
+            description: prResponse.data.body || '',
+        };
+
+        // Get the diff for the pull request
+        const { data: diffData } = await octokit.rest.pulls.get({
+            owner: repo.owner,
+            repo: repo.repo,
+            pull_number: prNumber,
+            mediaType: { format: 'diff' },
+        });
+
+        // Parse the diff data
+        const parsedDiff = parseDiff(diffData);
 
         // Filter out excluded files based on the patterns
-        const filesToReview = files.filter(file => {
-            return !excludePatterns.some(pattern => minimatch(file.filename, pattern));
+        const filesToReview = parsedDiff.filter(file => {
+            return !excludePatterns.some(pattern => minimatch(file.to, pattern));
         });
 
         if (filesToReview.length === 0) {
@@ -35,48 +61,97 @@ async function run() {
             return;
         }
 
-        core.info(`Files to review: ${filesToReview.map(f => f.filename).join(', ')}`);
+        core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
 
+        // Iterate through each file and chunk in the diff
         for (const file of filesToReview) {
-            const fileContent = await octokit.rest.repos.getContent({
-                owner: repo.owner,
-                repo: repo.repo,
-                path: file.filename,
-                ref: context.payload.pull_request.head.sha
-            });
+            if (file.to === '/dev/null') continue; // Ignore deleted files
 
-            const contentBuffer = Buffer.from(fileContent.data.content, 'base64');
-            const content = contentBuffer.toString('utf-8');
+            core.info(`Reviewing file: ${file.to}`);
 
-            core.info(`Reviewing file: ${file.filename}`);
+            for (const chunk of file.chunks) {
+                // Create prompt for the specific chunk
+                const prompt = createPrompt(file, chunk, prDetails);
 
-            // Send file content to OpenAI for review
-            const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: model,
-                messages: [{ role: 'user', content: `Please review the following code:\n\n${content}` }],
-                max_tokens: 500,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${openaiApiKey}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+                // Send the chunk content to OpenAI for review
+                const response = await getAIResponse(openaiApiKey, model, prompt);
 
-            const reviewComments = response.data.choices[0].message.content;
+                if (response && response.length > 0) {
+                    // Add comments for each AI response
+                    const comments = response.map(res => ({
+                        body: res.reviewComment,
+                        path: file.to,
+                        line: res.lineNumber
+                    }));
 
-            // Add comment to the pull request
-            await octokit.rest.issues.createComment({
-                owner: repo.owner,
-                repo: repo.repo,
-                issue_number: prNumber,
-                body: `### Review for \`${file.filename}\`\n\n${reviewComments}`
-            });
+                    await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
 
-            core.info(`Added review comments for file: ${file.filename}`);
+                    core.info(`Added review comments for file: ${file.to}`);
+                }
+            }
         }
 
     } catch (error) {
         core.setFailed(error.message);
+    }
+}
+
+// Function to create a prompt for OpenAI
+function createPrompt(file, chunk, prDetails) {
+    return `
+        Your task is to review pull requests. Instructions:
+        - Provide the response in following JSON format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
+        - Do not give positive comments or compliments.
+        - Provide comments and suggestions ONLY if there is something to improve, otherwise "reviews" should be an empty array.
+        - Write the comment in GitHub Markdown format.
+        - NEVER suggest adding comments to the code.
+
+        Review the following code diff in the file "${file.to}" and take the pull request title and description into account.
+
+        Pull request title: ${prDetails.title}
+        Pull request description: ${prDetails.description}
+
+        Git diff to review:
+
+        \`\`\`diff
+        ${chunk.content}
+        ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
+        \`\`\`
+    `;
+}
+
+// Function to call OpenAI for review
+async function getAIResponse(apiKey, model, prompt) {
+    try {
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 500,
+            temperature: 0.2,
+        }, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const res = response.data.choices[0].message.content.trim();
+        return JSON.parse(res).reviews || [];
+    } catch (error) {
+        core.error(`Error while calling OpenAI: ${error.message}`);
+        return null;
+    }
+}
+
+// Function to add review comments to the pull request
+async function addReviewComments(octokit, owner, repo, pull_number, comments) {
+    for (const comment of comments) {
+        await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: pull_number,
+            body: `### Review for line ${comment.line} in \`${comment.path}\`\n\n${comment.body}`,
+        });
     }
 }
 

@@ -100,25 +100,23 @@ async function run() {
 function createPrompt(file, chunk, prDetails) {
     return `
         Your task is to review pull requests. Instructions:
-        - Provide the response in following JSON format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
-        - Do not give positive comments or compliments.
-        - Provide comments and suggestions ONLY if there is something to improve, otherwise "reviews" should be an empty array.
-        - Write the comment in GitHub Markdown format.
-        - NEVER suggest adding comments to the code.
+        - Provide the response in raw JSON format without any markdown or code blocks.
+        - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
+        - Only suggest improvements; no compliments or comments if there is nothing to change.
+        - Write comments in GitHub Markdown format.
 
-        Review the following code diff in the file "${file.to}" and take the pull request title and description into account.
+        Review the following code diff in the file "${file.to}" considering the PR title and description:
 
         Pull request title: ${prDetails.title}
         Pull request description: ${prDetails.description}
 
         Git diff to review:
 
-        \`\`\`diff
         ${chunk.content}
         ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
-        \`\`\`
     `;
 }
+
 
 // Function to call OpenAI for review
 async function getAIResponse(apiKey, model, prompt) {

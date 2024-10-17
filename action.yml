@@ -1,0 +1,23 @@
+name: "BSF Code Reviewer"
+description: "PR ewviewer is a lightweight tool for reviewing GitHub Pull Requests, offering a clean interface to view diffs, leave comments, and manage multiple PRs with ease."
+inputs:
+  GITHUB_TOKEN:
+    description: "GitHub token to interact with the repository."
+    required: true
+  OPENAI_API_KEY:
+    description: "OpenAI API key for GPT."
+    required: true
+  OPENAI_API_MODEL:
+    description: "OpenAI API model."
+    required: false
+    default: "gpt-4"
+  exclude:
+    description: "Exclude files from diff analysis using glob patterns."
+    required: false
+    default: ""
+runs:
+  using: "node16"
+  main: "index.js"
+branding:
+  icon: "aperture"
+  color: "green"

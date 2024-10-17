@@ -16,8 +16,8 @@ inputs:
     required: false
     default: ""
 runs:
-  using: "node16"
-  main: "index.js"
+  using: "node18"
+  main: "dist/bundle.js"
 branding:
   icon: "aperture"
   color: "green"

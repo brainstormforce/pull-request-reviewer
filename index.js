@@ -63,6 +63,13 @@ async function run() {
 
         core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
 
+        // Get existing comments for the pull request
+        const { data: existingComments } = await octokit.rest.pulls.listReviewComments({
+            owner: repo.owner,
+            repo: repo.repo,
+            pull_number: prNumber
+        });
+
         // Iterate through each file and chunk in the diff
         for (const file of filesToReview) {
             if (file.to === '/dev/null') continue; // Ignore deleted files
@@ -79,16 +86,20 @@ async function run() {
                 const response = await getAIResponse(openaiApiKey, model, prompt);
 
                 if (response && response.length > 0) {
-                    // Add comments for each AI response
-                    const comments = response.map(res => ({
-                        body: res.reviewComment,
-                        path: file.to,
-                        line: res.lineNumber
-                    }));
+                    // Filter out comments that already exist on the line
+                    const comments = response.filter(res => !commentExists(existingComments, file.to, res.lineNumber))
+                        .map(res => ({
+                            body: res.reviewComment,
+                            path: file.to,
+                            line: res.lineNumber
+                        }));
 
-                    await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
-
-                    core.info(`Added review comments for file: ${file.to}`);
+                    if (comments.length > 0) {
+                        await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
+                        core.info(`Added review comments for file: ${file.to}`);
+                    } else {
+                        core.info(`No new comments to add for file: ${file.to}`);
+                    }
                 }
             }
         }
@@ -119,7 +130,6 @@ function createPrompt(file, chunk, prDetails) {
     `;
 }
 
-
 // Function to call OpenAI for review
 async function getAIResponse(apiKey, model, prompt) {
     try {
@@ -143,14 +153,21 @@ async function getAIResponse(apiKey, model, prompt) {
     }
 }
 
+// Function to check if a comment already exists on the same line
+function commentExists(existingComments, filePath, lineNumber) {
+    return existingComments.some(comment => comment.path === filePath && comment.line === lineNumber);
+}
+
 // Function to add review comments to the pull request
 async function addReviewComments(octokit, owner, repo, pull_number, comments) {
     for (const comment of comments) {
-        await octokit.rest.issues.createComment({
+        await octokit.rest.pulls.createReviewComment({
             owner,
             repo,
-            issue_number: pull_number,
-            body: `### Review for line ${comment.line} in \`${comment.path}\`\n\n${comment.body}`,
+            pull_number,
+            body: comment.body,
+            path: comment.path,
+            line: comment.line,
         });
     }
 }

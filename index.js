@@ -63,47 +63,34 @@ async function run() {
 
         core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
 
-        // Prepare the entire code for AI review
-        let fullDiffContent = '';
-
+        // Iterate through each file and chunk in the diff
         for (const file of filesToReview) {
             if (file.to === '/dev/null') continue; // Ignore deleted files
 
             core.info(`Reviewing file: ${file.to}`);
-            fullDiffContent += `\nFile: ${file.to}\n`;
 
-            // Check if chunks exist and are an array before mapping
-            if (Array.isArray(file.chunks)) {
-                fullDiffContent += file.chunks.map(chunk => chunk.content).join('\n');
+            for (const chunk of file.chunks) {
+                // Create prompt for the specific chunk
+                const prompt = createPrompt(file, chunk, prDetails);
+
+                core.info(`Prompt for chunk: ${prompt}`);
+
+                // Send the chunk content to OpenAI for review
+                const response = await getAIResponse(openaiApiKey, model, prompt);
+
+                if (response && response.length > 0) {
+                    // Add comments for each AI response
+                    const comments = response.map(res => ({
+                        body: res.reviewComment,
+                        path: file.to,
+                        line: res.lineNumber
+                    }));
+
+                    await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
+
+                    core.info(`Added review comments for file: ${file.to}`);
+                }
             }
-
-            // Check if changes exist and are an array before mapping
-            if (Array.isArray(file.changes)) {
-                fullDiffContent += '\n' + file.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n');
-            }
-        }
-
-        // Create prompt for AI
-        const prompt = createPrompt(fullDiffContent, prDetails);
-        core.info(`Prompt for AI: ${prompt}`);
-
-        // Send the entire code diff to OpenAI for review
-        const response = await getAIResponse(openaiApiKey, model, prompt);
-
-        if (response && response.length > 0) {
-            const { reviews, changesRequested } = response;
-
-            if (changesRequested) {
-                // If there are requested changes, add them to the PR
-                await addReviewComments(octokit, repo.owner, repo.repo, prNumber, reviews);
-                core.info(`Added review comments for PR #${prNumber}`);
-            } else {
-                // Mark the PR as approved if no changes are requested
-                await approvePullRequest(octokit, repo.owner, repo.repo, prNumber);
-                core.info(`PR #${prNumber} marked as approved.`);
-            }
-        } else {
-            core.info('No response received from AI.');
         }
 
     } catch (error) {
@@ -112,22 +99,26 @@ async function run() {
 }
 
 // Function to create a prompt for OpenAI
-function createPrompt(diffContent, prDetails) {
+function createPrompt(file, chunk, prDetails) {
     return `
-        Your task is to review the following pull request. Provide the response in raw JSON format without any markdown or code blocks.
-        Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}], "changesRequested": <boolean>}
-        If no changes are needed, set changesRequested to false.
+        Your task is to review pull requests. Instructions:
+        - Provide the response in raw JSON format without any markdown or code blocks.
+        - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
+        - Only suggest improvements; no compliments or comments if there is nothing to change.
+        - Write comments in GitHub Markdown format.
 
-        Review the following code diff considering the PR title and description:
+        Review the following code diff in the file "${file.to}" considering the PR title and description:
 
         Pull request title: ${prDetails.title}
         Pull request description: ${prDetails.description}
 
         Git diff to review:
 
-        ${diffContent}
+        ${chunk.content}
+        ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
     `;
 }
+
 
 // Function to call OpenAI for review
 async function getAIResponse(apiKey, model, prompt) {
@@ -145,7 +136,7 @@ async function getAIResponse(apiKey, model, prompt) {
         });
 
         const res = response.data.choices[0].message.content.trim();
-        return JSON.parse(res);
+        return JSON.parse(res).reviews || [];
     } catch (error) {
         core.error(`Error while calling OpenAI: ${error.message}`);
         return null;
@@ -162,17 +153,6 @@ async function addReviewComments(octokit, owner, repo, pull_number, comments) {
             body: `### Review for line ${comment.line} in \`${comment.path}\`\n\n${comment.body}`,
         });
     }
-}
-
-// Function to approve the pull request
-async function approvePullRequest(octokit, owner, repo, pull_number) {
-    await octokit.rest.pulls.createReview({
-        owner,
-        repo,
-        pull_number,
-        event: 'APPROVE',
-        body: 'Automated approval: No changes requested.',
-    });
 }
 
 run();

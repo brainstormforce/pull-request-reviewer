@@ -86,6 +86,8 @@ async function run() {
                     for (const res of response) {
                         const position = findPositionInChunk(chunk, res.lineNumber);
 
+                        core.info(`Found position ${position} for line ${res.lineNumber}`);
+
                         if (position === -1) {
                             core.info(`Skipping review for line ${res.lineNumber} as no matching position was found.`);
                             continue;
@@ -97,6 +99,8 @@ async function run() {
                             core.info(`Skipping duplicate comment on line ${res.lineNumber} at position ${position}.`);
                             continue;
                         }
+
+                        core.info(`Adding review comment for line ${res.lineNumber} at position ${position}`);
 
                         await addReviewComment(octokit, repo.owner, repo.repo, prNumber, latestCommitSha, file.to, position, res.reviewComment);
 

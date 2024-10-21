@@ -101,7 +101,7 @@ async function run() {
 
 // Function to create a prompt for OpenAI
 function createPrompt(file, chunk, prDetails) {
-    return `
+    let prompt = `
         Your task is to review pull requests. Instructions:
         - Provide the response in raw JSON format without any markdown or code blocks.
         - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
@@ -118,6 +118,8 @@ function createPrompt(file, chunk, prDetails) {
         ${chunk.content}
         ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
     `;
+
+    core.info(prompt);
 }
 
 

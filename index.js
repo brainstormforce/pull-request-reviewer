@@ -81,6 +81,7 @@ async function run() {
                 // Send the chunk content to OpenAI for review
                 const response = await getAIResponse(openaiApiKey, model, prompt);
 
+                core.info(`Received response from OpenAI: ${JSON.stringify(response)}`);
                 if (response && response.length > 0) {
                     // Add comments for each AI response
                     for (const res of response) {

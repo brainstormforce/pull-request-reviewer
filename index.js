@@ -72,15 +72,18 @@ class GitHubRepo {
 
     async getFiles() {
         try {
-            const { data: files } = await this.client.pulls.listFiles({
+            const { data: diffData } = await this.client.pulls.get({
                 owner: this.owner,
                 repo: this.repo,
                 pull_number: this.pullNumber,
+                mediaType: { format: 'diff' },
             });
-            return files;
+
+            // Assuming you want to get a list of changed files
+            return diffData.files; // Adjust this based on your needs
         } catch (error) {
-            Log.print(`Error fetching files: ${error.message}`, 'red');
-            throw error; // Rethrow to handle it in the calling function if needed
+            console.error(`Error fetching files: ${error.message}`);
+            throw error; // Re-throw to handle it in the calling function if needed
         }
     }
 
@@ -96,9 +99,9 @@ class GitHubRepo {
                 path: file,
                 line: line,
             });
-            Log.print(`Posted comment on ${file}${line ? ' at line ' + line : ''}: ${text}`, 'green');
+            console.log(`Posted comment on ${file}${line ? ' at line ' + line : ''}: ${text}`);
         } catch (error) {
-            Log.print(`Failed to post comment on ${file}${line ? ' at line ' + line : ''}: ${error.message}`, 'red');
+            console.error(`Failed to post comment on ${file}${line ? ' at line ' + line : ''}: ${error.message}`);
         }
     }
 }

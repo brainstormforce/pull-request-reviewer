@@ -119,21 +119,28 @@ async function run() {
         const githubRepo = new GitHubRepo(token, owner, repo, pull_number);
         const ai = new AI(chatgpt_token, chatgpt_model);
 
-        const { data: { files } } = await githubRepo.client.rest.pulls.getFiles({
+        // Fetch the pull request details, including the changed files
+        const { data: pullRequest } = await githubRepo.client.pulls.get({
             owner,
             repo,
             pull_number,
+            mediaType: { format: 'diff' }, // Get the diff format
         });
+
+        // Assuming pullRequest.files contains the file changes
+        const files = pullRequest.files || []; // Adjust this according to the actual response structure
 
         for (const file of files) {
             Log.print(`Checking file: ${file.filename}`, 'green');
 
-            const fileContent = await githubRepo.client.rest.repos.getContent({
+            // Fetch the file content
+            const { data: contentResponse } = await githubRepo.client.repos.getContent({
                 owner,
                 repo,
                 path: file.filename,
-            }).then(res => Buffer.from(res.data.content, 'base64').toString('utf8'));
+            });
 
+            const fileContent = Buffer.from(contentResponse.content, 'base64').toString('utf8');
             const diffs = parseDiff(file.patch);
             const aiResponse = await ai.requestReview(fileContent, diffs);
 

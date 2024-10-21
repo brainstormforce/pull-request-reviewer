@@ -7,7 +7,6 @@ const fs = require('fs');
 
 async function run() {
     try {
-        // Get input values from action.yml
         const githubToken = core.getInput('GITHUB_TOKEN');
         const openaiApiKey = core.getInput('OPENAI_API_KEY');
         const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4';
@@ -16,11 +15,9 @@ async function run() {
         const octokit = github.getOctokit(githubToken);
         const { context } = github;
 
-        // Load the event data to retrieve pull request details
         const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH || '', 'utf8'));
         const repo = context.repo;
 
-        // Get PR number and details
         const prNumber = eventData.pull_request ? eventData.pull_request.number : null;
         if (!prNumber) {
             core.setFailed('Pull request number not found.');
@@ -29,7 +26,6 @@ async function run() {
 
         core.info(`Reviewing PR #${prNumber} in repo ${repo.owner}/${repo.repo}`);
 
-        // Get PR details (title and description)
         const prResponse = await octokit.rest.pulls.get({
             owner: repo.owner,
             repo: repo.repo,
@@ -40,7 +36,6 @@ async function run() {
             description: prResponse.data.body || '',
         };
 
-        // Get the diff for the pull request
         const { data: diffData } = await octokit.rest.pulls.get({
             owner: repo.owner,
             repo: repo.repo,
@@ -48,10 +43,8 @@ async function run() {
             mediaType: { format: 'diff' },
         });
 
-        // Parse the diff data
         const parsedDiff = parseDiff(diffData);
 
-        // Filter out excluded files based on the patterns
         const filesToReview = parsedDiff.filter(file => {
             return !excludePatterns.some(pattern => minimatch(file.to, pattern));
         });
@@ -63,42 +56,45 @@ async function run() {
 
         core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
 
-        // Get existing comments for the pull request
-        const { data: existingComments } = await octokit.rest.pulls.listReviewComments({
+        // Get the latest commit SHA for the PR
+        const latestCommitSha = prResponse.data.head.sha;
+
+        // Retrieve existing comments for the PR
+        const existingCommentsResponse = await octokit.rest.pulls.listReviewComments({
             owner: repo.owner,
             repo: repo.repo,
             pull_number: prNumber
         });
+        const existingComments = existingCommentsResponse.data;
 
-        // Iterate through each file and chunk in the diff
         for (const file of filesToReview) {
-            if (file.to === '/dev/null') continue; // Ignore deleted files
+            if (file.to === '/dev/null') continue;
 
             core.info(`Reviewing file: ${file.to}`);
 
             for (const chunk of file.chunks) {
-                // Create prompt for the specific chunk
                 const prompt = createPrompt(file, chunk, prDetails);
 
                 core.info(`Prompt for chunk: ${prompt}`);
 
-                // Send the chunk content to OpenAI for review
-                const response = await getAIResponse(openaiApiKey, model, prompt);
+                const aiResponse = await getAIResponse(openaiApiKey, model, prompt);
 
-                if (response && response.length > 0) {
-                    // Filter out comments that already exist on the line
-                    const comments = response.filter(res => !commentExists(existingComments, file.to, res.lineNumber))
-                        .map(res => ({
-                            body: res.reviewComment,
-                            path: file.to,
-                            line: res.lineNumber
-                        }));
+                if (aiResponse && aiResponse.length > 0) {
+                    for (const res of aiResponse) {
+                        const position = findPositionInChunk(chunk, res.lineNumber);
+                        if (position !== -1) {
+                            const commentExists = existingComments.some(comment =>
+                                comment.path === file.to &&
+                                comment.position === position
+                            );
 
-                    if (comments.length > 0) {
-                        await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
-                        core.info(`Added review comments for file: ${file.to}`);
-                    } else {
-                        core.info(`No new comments to add for file: ${file.to}`);
+                            if (!commentExists) {
+                                await addReviewComment(octokit, repo.owner, repo.repo, prNumber, latestCommitSha, file.to, position, res.reviewComment);
+                                core.info(`Added review comment on file ${file.to} at position ${position}`);
+                            } else {
+                                core.info(`Skipping comment on file ${file.to} at position ${position} (already exists).`);
+                            }
+                        }
                     }
                 }
             }
@@ -109,7 +105,6 @@ async function run() {
     }
 }
 
-// Function to create a prompt for OpenAI
 function createPrompt(file, chunk, prDetails) {
     return `
         Your task is to review pull requests. Instructions:
@@ -130,7 +125,6 @@ function createPrompt(file, chunk, prDetails) {
     `;
 }
 
-// Function to call OpenAI for review
 async function getAIResponse(apiKey, model, prompt) {
     try {
         const response = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -153,23 +147,29 @@ async function getAIResponse(apiKey, model, prompt) {
     }
 }
 
-// Function to check if a comment already exists on the same line
-function commentExists(existingComments, filePath, lineNumber) {
-    return existingComments.some(comment => comment.path === filePath && comment.line === lineNumber);
-}
-
-// Function to add review comments to the pull request
-async function addReviewComments(octokit, owner, repo, pull_number, comments) {
-    for (const comment of comments) {
+async function addReviewComment(octokit, owner, repo, pull_number, commit_id, path, position, body) {
+    try {
         await octokit.rest.pulls.createReviewComment({
             owner,
             repo,
             pull_number,
-            body: comment.body,
-            path: comment.path,
-            line: comment.line,
+            commit_id,
+            path,
+            position,
+            body,
         });
+    } catch (error) {
+        core.error(`Error while adding review comment: ${error.message}`);
     }
+}
+
+function findPositionInChunk(chunk, lineNumber) {
+    for (const change of chunk.changes) {
+        if (change.ln === lineNumber || change.ln2 === lineNumber) {
+            return change.position; // Return the diff position for the line
+        }
+    }
+    return -1;
 }
 
 run();

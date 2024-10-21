@@ -162,6 +162,8 @@ async function getAIResponse(apiKey, model, prompt) {
 
 // Function to find the correct diff position from the chunk and line number
 function findPositionInChunk(chunk, lineNumber) {
+    core.info('Finding position for line number: ' + lineNumber);
+    core.info('Chunk: ' + JSON.stringify(chunk));
     for (const change of chunk.changes) {
         // Find the correct diff position by matching the line number from the diff
         if ((change.ln || change.ln2) === lineNumber) {

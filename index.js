@@ -73,6 +73,8 @@ async function run() {
                 // Create prompt for the specific chunk
                 const prompt = createPrompt(file, chunk, prDetails);
 
+                core.info(`Prompt for chunk: ${prompt}`);
+
                 // Send the chunk content to OpenAI for review
                 const response = await getAIResponse(openaiApiKey, model, prompt);
 

@@ -1,158 +1,146 @@
+// Import statements for required libraries
 const core = require('@actions/core');
 const github = require('@actions/github');
-const axios = require('axios');
-const minimatch = require('minimatch');
 const parseDiff = require('parse-diff');
-const fs = require('fs');
+const axios = require('axios');
+const { Octokit } = require("@octokit/rest");
 
+// AI Class Definition
+class AI {
+    constructor(token, model) {
+        this.token = token;
+        this.model = model;
+    }
+
+    async requestReview(fileContent, diffs) {
+        const prompt = this.constructPrompt(fileContent, diffs);
+        try {
+            const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+                model: this.model,
+                messages: [{ role: "user", content: prompt }],
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            return response.data.choices[0].message.content;
+        } catch (error) {
+            throw new Error(`AI request failed: ${error.message}`);
+        }
+    }
+
+    constructPrompt(fileContent, diffs) {
+        return `
+        Please review the following code and provide feedback. 
+        Here is the complete code:
+
+        Code:
+        ${fileContent}
+
+        Diffs:
+        ${JSON.stringify(diffs)}
+
+        Please provide comments for any issues found in the code, and highlight specific lines if necessary.
+        `;
+    }
+}
+
+// Log Class for logging actions
+class Log {
+    static print(message, color = "white") {
+        const colorCodes = {
+            white: '\x1b[37m',
+            green: '\x1b[32m',
+            yellow: '\x1b[33m',
+            red: '\x1b[31m',
+            reset: '\x1b[0m',
+        };
+        console.log(`${colorCodes[color]}${message}${colorCodes.reset}`);
+    }
+}
+
+// GitHubRepo Class for interacting with GitHub
+class GitHubRepo {
+    constructor(token, owner, repo, pullNumber) {
+        this.token = token;
+        this.owner = owner;
+        this.repo = repo;
+        this.pullNumber = pullNumber;
+        this.client = new Octokit({ auth: this.token }); // Updated initialization
+    }
+
+    async postComment(file, text, line = null) {
+        const body = line
+            ? `Line ${line}: ${text}`
+            : text;
+
+        try {
+            await this.client.pulls.createReviewComment({
+                owner: this.owner,
+                repo: this.repo,
+                pull_number: this.pullNumber,
+                body: body,
+                path: file,
+                line: line,
+            });
+            Log.print(`Posted comment on ${file}${line ? ' at line ' + line : ''}: ${text}`, 'green');
+        } catch (error) {
+            Log.print(`Failed to post comment on ${file}${line ? ' at line ' + line : ''}: ${error.message}`, 'red');
+        }
+    }
+}
+
+// Main function to analyze code changes
 async function run() {
     try {
-        // Get input values from action.yml
-        const githubToken = core.getInput('GITHUB_TOKEN');
-        const openaiApiKey = core.getInput('OPENAI_API_KEY');
-        const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4';
-        const excludePatterns = core.getInput('exclude').split(',').map(p => p.trim());
+        const token = core.getInput('github_token');
+        const chatgpt_token = core.getInput('chatgpt_token');
+        const chatgpt_model = core.getInput('chatgpt_model');
+        const owner = github.context.repo.owner;
+        const repo = github.context.repo.repo;
+        const pull_number = github.context.issue.number;
 
-        const octokit = github.getOctokit(githubToken);
-        const { context } = github;
+        const githubRepo = new GitHubRepo(token, owner, repo, pull_number);
+        const ai = new AI(chatgpt_token, chatgpt_model);
 
-        // Load the event data to retrieve pull request details
-        const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH || '', 'utf8'));
-        const repo = context.repo;
-
-        // Get PR number and details
-        const prNumber = eventData.pull_request ? eventData.pull_request.number : null;
-        if (!prNumber) {
-            core.setFailed('Pull request number not found.');
-            return;
-        }
-
-        core.info(`Reviewing PR #${prNumber} in repo ${repo.owner}/${repo.repo}`);
-
-        // Get PR details (title and description)
-        const prResponse = await octokit.rest.pulls.get({
-            owner: repo.owner,
-            repo: repo.repo,
-            pull_number: prNumber
-        });
-        const prDetails = {
-            title: prResponse.data.title || '',
-            description: prResponse.data.body || '',
-        };
-
-        // Get the diff for the pull request
-        const { data: diffData } = await octokit.rest.pulls.get({
-            owner: repo.owner,
-            repo: repo.repo,
-            pull_number: prNumber,
-            mediaType: { format: 'diff' },
+        const { data: { files } } = await githubRepo.client.rest.pulls.getFiles({
+            owner,
+            repo,
+            pull_number,
         });
 
-        // Parse the diff data
-        const parsedDiff = parseDiff(diffData);
+        for (const file of files) {
+            Log.print(`Checking file: ${file.filename}`, 'green');
 
-        // Filter out excluded files based on the patterns
-        const filesToReview = parsedDiff.filter(file => {
-            return !excludePatterns.some(pattern => minimatch(file.to, pattern));
-        });
+            const fileContent = await githubRepo.client.rest.repos.getContent({
+                owner,
+                repo,
+                path: file.filename,
+            }).then(res => Buffer.from(res.data.content, 'base64').toString('utf8'));
 
-        if (filesToReview.length === 0) {
-            core.info("No files to review after applying exclude patterns.");
-            return;
-        }
+            const diffs = parseDiff(file.patch);
+            const aiResponse = await ai.requestReview(fileContent, diffs);
 
-        core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
+            if (aiResponse) {
+                const linesWithComments = aiResponse.split('\n').reduce((acc, line, index) => {
+                    const match = line.match(/Line (\d+): (.+)/);
+                    if (match) {
+                        acc.push({ line: parseInt(match[1]), text: match[2] });
+                    }
+                    return acc;
+                }, []);
 
-        // Iterate through each file and chunk in the diff
-        for (const file of filesToReview) {
-            if (file.to === '/dev/null') continue; // Ignore deleted files
-
-            core.info(`Reviewing file: ${file.to}`);
-
-            for (const chunk of file.chunks) {
-                // Create prompt for the specific chunk
-                const prompt = createPrompt(file, chunk, prDetails);
-
-                core.info(`Prompt for chunk: ${prompt}`);
-
-                // Send the chunk content to OpenAI for review
-                const response = await getAIResponse(openaiApiKey, model, prompt);
-
-                if (response && response.length > 0) {
-                    // Add comments for each AI response
-                    const comments = response.map(res => ({
-                        body: res.reviewComment,
-                        path: file.to,
-                        line: res.lineNumber
-                    }));
-
-                    await addReviewComments(octokit, repo.owner, repo.repo, prNumber, comments);
-
-                    core.info(`Added review comments for file: ${file.to}`);
+                for (const { line, text } of linesWithComments) {
+                    await githubRepo.postComment(file.filename, text, line);
                 }
             }
         }
-
     } catch (error) {
+        Log.print(`Error: ${error.message}`, 'red');
         core.setFailed(error.message);
     }
 }
 
-// Function to create a prompt for OpenAI
-function createPrompt(file, chunk, prDetails) {
-    return `
-        Your task is to review pull requests. Instructions:
-        - Provide the response in raw JSON format without any markdown or code blocks.
-        - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
-        - Only suggest improvements; no compliments or comments if there is nothing to change.
-        - Write comments in GitHub Markdown format.
-
-        Review the following code diff in the file "${file.to}" considering the PR title and description:
-
-        Pull request title: ${prDetails.title}
-        Pull request description: ${prDetails.description}
-
-        Git diff to review:
-
-        ${chunk.content}
-        ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
-    `;
-}
-
-
-// Function to call OpenAI for review
-async function getAIResponse(apiKey, model, prompt) {
-    try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: model,
-            messages: [{ role: 'user', content: prompt }],
-            max_tokens: 500,
-            temperature: 0.2,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const res = response.data.choices[0].message.content.trim();
-        return JSON.parse(res).reviews || [];
-    } catch (error) {
-        core.error(`Error while calling OpenAI: ${error.message}`);
-        return null;
-    }
-}
-
-// Function to add review comments to the pull request
-async function addReviewComments(octokit, owner, repo, pull_number, comments) {
-    for (const comment of comments) {
-        await octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: pull_number,
-            body: `### Review for line ${comment.line} in \`${comment.path}\`\n\n${comment.body}`,
-        });
-    }
-}
-
+// Run the main function
 run();

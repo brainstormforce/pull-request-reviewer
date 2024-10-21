@@ -71,8 +71,16 @@ async function run() {
 
             core.info(`Reviewing file: ${file.to}`);
             fullDiffContent += `\nFile: ${file.to}\n`;
-            fullDiffContent += file.chunks.map(chunk => chunk.content).join('\n');
-            fullDiffContent += '\n' + file.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n');
+
+            // Check if chunks exist and are an array before mapping
+            if (Array.isArray(file.chunks)) {
+                fullDiffContent += file.chunks.map(chunk => chunk.content).join('\n');
+            }
+
+            // Check if changes exist and are an array before mapping
+            if (Array.isArray(file.changes)) {
+                fullDiffContent += '\n' + file.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n');
+            }
         }
 
         // Create prompt for AI

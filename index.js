@@ -173,6 +173,13 @@ function findPositionInChunk(chunk, lineNumber) {
 
 // Function to add a review comment to the pull request
 async function addReviewComment(octokit, owner, repo, pull_number, commit_id, path, position, body) {
+
+    core.info('owner: ' + owner);
+    core.info('pull_number: ' + pull_number);
+    core.info('commit_id: ' + commit_id);
+    core.info('path: ' + path);
+    core.info('position: ' + position);
+    core.info('body: ' + body);
     try {
         const response = await octokit.rest.pulls.createReviewComment({
             owner,

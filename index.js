@@ -67,13 +67,25 @@ class GitHubRepo {
         this.owner = owner;
         this.repo = repo;
         this.pullNumber = pullNumber;
-        this.client = new Octokit({ auth: this.token }); // Updated initialization
+        this.client = new Octokit({ auth: this.token });
+    }
+
+    async getFiles() {
+        try {
+            const { data: files } = await this.client.pulls.listFiles({
+                owner: this.owner,
+                repo: this.repo,
+                pull_number: this.pullNumber,
+            });
+            return files;
+        } catch (error) {
+            Log.print(`Error fetching files: ${error.message}`, 'red');
+            throw error; // Rethrow to handle it in the calling function if needed
+        }
     }
 
     async postComment(file, text, line = null) {
-        const body = line
-            ? `Line ${line}: ${text}`
-            : text;
+        const body = line ? `Line ${line}: ${text}` : text;
 
         try {
             await this.client.pulls.createReviewComment({

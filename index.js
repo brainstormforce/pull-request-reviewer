@@ -74,7 +74,6 @@ async function run() {
                 const prompt = createPrompt(file, chunk, prDetails);
 
                 core.info(`Prompt for chunk: ${prompt}`);
-                console.log('Prompt:', prompt);
 
                 // Send the chunk content to OpenAI for review
                 const response = await getAIResponse(openaiApiKey, model, prompt);
@@ -101,7 +100,7 @@ async function run() {
 
 // Function to create a prompt for OpenAI
 function createPrompt(file, chunk, prDetails) {
-    let prompt = `
+    return `
         Your task is to review pull requests. Instructions:
         - Provide the response in raw JSON format without any markdown or code blocks.
         - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
@@ -118,8 +117,6 @@ function createPrompt(file, chunk, prDetails) {
         ${chunk.content}
         ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
     `;
-
-    core.info(prompt);
 }
 
 

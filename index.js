@@ -118,7 +118,7 @@ class PullRequestReviewer {
                                                                             "description": "Single liner review comment. LGTM if no changes are requested."
                                                                         }
                                                                 },
-                                                            "required": ["path", "position", "body"],
+                                                            "required": ["path", "position", "side", "body"],
                                                             "additionalProperties": false
                                                         }
                                                 }

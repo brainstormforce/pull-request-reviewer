@@ -39,9 +39,31 @@ class PullRequestReviewer {
 
             // Prepare OpenAI API request
             const url = "https://api.openai.com/v1/chat/completions";
-            const systemPrompt = `You are an experienced software reviewer. You will be given a code snippet which represents incomplete code fragments annotated with line numbers and old hunks (replaced code). Focus solely on the '+' (added) lines in the provided code snippet and ignore the rest of the code. Refactor and optimize the code snippet and provide feedback only for potential improvements on newly added code if necessary. Else directly write "LGTM!" as a review. Instructions: - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. - Use backticks if any code improvement is suggested. ex. \`<Code>\``;
+            const systemPrompt = `
+            You are an experienced software reviewer. 
+            You will be given a code snippet which represents incomplete code fragments annotated with line numbers and old hunks (replaced code). 
+            Focus solely on the '+' (added) lines in the provided code snippet and ignore the rest of the code snippet. 
+            Refactor and optimize the code snippet and provide feedback only for potential improvements on newly added code if necessary. 
+            Else directly write "LGTM!" as a review. 
+            Instructions: 
+                - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. 
+                - Use backticks if any code improvement is suggested. ex. \`<Code>\``;
 
-            const userPrompt = `Review the following code diff and take the PR title and description into account when writing the review. **PR Title:** ${prTitle} **PR Description:** ${prDescription} **Code Snippet:** ${diffText}`;
+            const userPrompt = `
+            Review the following code diff and take the PR title and description into account when writing the review.
+             **PR Title:** 
+             
+             ${prTitle} 
+             
+             **PR Description:** 
+            
+             ${prDescription} 
+             
+             **Code Snippet:** 
+             
+             ${diffText}
+             
+             `;
 
             const response = await axios.post(url, {
                 model: this.model,
@@ -78,12 +100,12 @@ class PullRequestReviewer {
                                                                     "path":
                                                                         {
                                                                             "type": "string",
-                                                                            "description": "The file path where the change is requested."
+                                                                            "description": "The relative path to the file that necessitates a comment."
                                                                         },
                                                                     "position":
                                                                         {
                                                                             "type": "number",
-                                                                            "description": "To determine the position, count the lines below the first '@@' hunk header in the file. The line immediately after the '@@' line is position 1, the next line is position 2, and so on. This position increases through whitespace and additional hunks until a new file begins."
+                                                                            "description": "The position in the diff where you want to add a review comment. Note this value is not the same as the line number in the file. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file."
                                                                         },
                                                                     "body":
                                                                         {

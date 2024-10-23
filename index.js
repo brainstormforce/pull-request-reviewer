@@ -47,7 +47,8 @@ class PullRequestReviewer {
             Else directly write "LGTM!" as a review. 
             Instructions: 
                 - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. 
-                - Use backticks if any code improvement is suggested. ex. \`<Code>\``;
+                - Use backticks if any code improvement is suggested.
+                `;
 
             const userPrompt = `
             Review the following code diff and take the PR title and description into account when writing the review.

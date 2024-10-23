@@ -34,8 +34,6 @@ class PullRequestReviewer {
             const extractedDiffs = this.extractBlocks(diff);
             const diffText = extractedDiffs.join("\n\n");
 
-            core.info("Extracted Diffs: " + diffText);
-
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
 
@@ -117,7 +115,10 @@ class PullRequestReviewer {
             const completion = response.data;
             const review = JSON.parse(completion.choices[0].message.content);
 
-            core.info("Review: " + JSON.stringify(review));
+            core.info("-------------------");
+            core.info("AI Review: " + JSON.stringify(review));
+            core.info("-------------------");
+
             const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
             const positions = prComments.map(comment => comment.position);
 

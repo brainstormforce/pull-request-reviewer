@@ -35,7 +35,7 @@ class PullRequestReviewer {
             });
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
-            const diffText = extractedDiffs.join("\n\n");
+            const diffText = this.constructor.extractedDiffs.join("\n\n");
 
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";

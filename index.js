@@ -194,12 +194,7 @@ class PullRequestReviewer {
         for(const comment of prComments) {
             if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 
-
-                core.info("Dismissing review comment...");
-
-
-
-
+                core.info("Dismissing review comment on Path: " + comment.path);
 
                 // check if path exists in extractedDiffs
                 const path = comment.path;
@@ -210,8 +205,6 @@ class PullRequestReviewer {
 
                 // Get the comment
                 const commentText = comment.body;
-                core.info(commentText);
-                core.info('-------------------');
 
                 const userPrompt = `
                 Code snippet:
@@ -271,13 +264,12 @@ class PullRequestReviewer {
                     if(review.status === "RESOLVED") {
 
                         // Dismiss review
-                        await this.octokit.rest.pulls.dismissReview({
+                        await this.octokit.rest.pulls.deleteReviewComment({
                             owner,
                             repo,
-                            pull_number: pullRequestId,
-                            review_id: comment.pull_request_review_id,
-                            message: "Resolved. Thank you :thumbsup:",
+                            comment_id: comment.id
                         });
+
                         core.info("Review dismissed successfully!");
                     }
 

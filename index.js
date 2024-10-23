@@ -191,15 +191,24 @@ class PullRequestReviewer {
         for(const comment of prComments) {
             if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 
+                core.info('-------------------');
                 core.info("Dismissing review comment...");
+
+                core.info(comment);
+
 
                 // check if path exists in extractedDiffs
                 const path = comment.path;
                 const extractedDiffs = this.constructor.extractedDiffs;
                 const file = extractedDiffs.find(file => file[path]);
 
+                core.info(extractedDiffs);
+                core.info(file);
+
                 // Get the comment
                 const commentText = comment.body;
+                core.info(commentText);
+                core.info('-------------------');
 
                 const userPrompt = `
                 Code snippet:

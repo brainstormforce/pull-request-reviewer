@@ -188,6 +188,9 @@ class PullRequestReviewer {
     async dismissPullRequestReview(pullRequestId, prComments) {
         const owner = context.repo.owner;
         const repo = context.repo.repo;
+
+        const url = "https://api.openai.com/v1/chat/completions";
+
         for(const comment of prComments) {
             if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 
@@ -202,9 +205,7 @@ class PullRequestReviewer {
                 const path = comment.path;
                 core.info('Path: ' + path);
                 const extractedDiffs = this.constructor.extractedDiffs;
-                core.info(JSON.stringify(extractedDiffs));
                 const file = extractedDiffs.find(file => file[path]);
-                core.info(JSON.stringify(file));
 
 
                 // Get the comment

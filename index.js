@@ -48,6 +48,7 @@ class PullRequestReviewer {
             Instructions: 
                 - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. 
                 - Use backticks if any code improvement is suggested.
+                - The event APPROVE must be used if no significant changes are recommended for actionable reviews.
                 `;
 
             const userPrompt = `

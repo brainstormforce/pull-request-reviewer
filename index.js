@@ -1,220 +1,219 @@
-const core = require('@actions/core');
-const github = require('@actions/github');
-const axios = require('axios');
-const minimatch = require('minimatch');
-const parseDiff = require('parse-diff');
-const fs = require('fs');
+const { Octokit } = require("@octokit/rest");
+const axios = require("axios");
+const { GitHub, context } = require("@actions/github");
+const core = require("@actions/core");
 
-async function run() {
-    try {
-        // Get input values from action.yml
-        const githubToken = core.getInput('GITHUB_TOKEN');
-        const openaiApiKey = core.getInput('OPENAI_API_KEY');
-        const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4';
-        const excludePatterns = core.getInput('exclude').split(',').map(p => p.trim());
+class PullRequestReviewer {
+    constructor(githubToken, openaiApiKey, model) {
+        this.octokit = new Octokit({ auth: githubToken });
+        this.openaiApiKey = openaiApiKey;
+        this.model = model;
+        this.baseUrl = "https://api.github.com";
+    }
 
-        const octokit = github.getOctokit(githubToken);
-        const { context } = github;
+    async reviewPullRequest(pullRequestId) {
+        const owner = context.repo.owner;
+        const repo = context.repo.repo;
 
-        // Load the event data to retrieve pull request details
-        const eventData = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH || '', 'utf8'));
-        const repo = context.repo;
+        try {
+            // Get PR details
+            const { data: prDetails } = await this.octokit.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pullRequestId,
+            });
 
-        // Get PR number and details
-        const prNumber = eventData.pull_request ? eventData.pull_request.number : null;
-        if (!prNumber) {
-            core.setFailed('Pull request number not found.');
-            return;
-        }
+            // Fetch the PR diff
+            const { data: diff } = await this.octokit.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pullRequestId,
+                mediaType: { format: "diff" },
+            });
 
-        core.info(`Reviewing PR #${prNumber} in repo ${repo.owner}/${repo.repo}`);
+            const extractedDiffs = this.extractBlocks(diff);
+            const diffText = extractedDiffs.join("\n\n");
 
-        // Get PR details (title and description)
-        const prResponse = await octokit.rest.pulls.get({
-            owner: repo.owner,
-            repo: repo.repo,
-            pull_number: prNumber
-        });
-        const prDetails = {
-            title: prResponse.data.title || '',
-            description: prResponse.data.body || '',
-        };
+            core.info("Extracted Diffs: " + diffText);
 
-        // Get the latest commit SHA for the pull request
-        const latestCommitSha = prResponse.data.head.sha;
+            const prTitle = prDetails.title || "";
+            const prDescription = prDetails.body || "";
 
-        // Get the diff for the pull request
-        const { data: diffData } = await octokit.rest.pulls.get({
-            owner: repo.owner,
-            repo: repo.repo,
-            pull_number: prNumber,
-            mediaType: { format: 'diff' },
-        });
+            // Prepare OpenAI API request
+            const url = "https://api.openai.com/v1/chat/completions";
+            const systemPrompt = `You are an experienced software reviewer. You will be given a code snippet which represents incomplete code fragments annotated with line numbers and old hunks (replaced code). Focus solely on the '+' (added) lines in the provided code snippet and ignore the rest of the code. Refactor and optimize the code snippet and provide feedback only for potential improvements on newly added code if necessary. Else directly write "LGTM!" as a review. Instructions: - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. - Use backticks if any code improvement is suggested. ex. \`<Code>\``;
 
-        // Parse the diff data
-        const parsedDiff = parseDiff(diffData);
+            const userPrompt = `Review the following code diff and take the PR title and description into account when writing the review. **PR Title:** ${prTitle} **PR Description:** ${prDescription} **Code Snippet:** ${diffText}`;
 
-        // Filter out excluded files based on the patterns
-        const filesToReview = parsedDiff.filter(file => {
-            return !excludePatterns.some(pattern => minimatch(file.to, pattern));
-        });
-
-        if (filesToReview.length === 0) {
-            core.info("No files to review after applying exclude patterns.");
-            return;
-        }
-
-        core.info(`Files to review: ${filesToReview.map(f => f.to).join(', ')}`);
-
-        // Iterate through each file and chunk in the diff
-        for (const file of filesToReview) {
-            if (file.to === '/dev/null') continue; // Ignore deleted files
-
-            core.info(`Reviewing file: ${file.to}`);
-
-            for (const chunk of file.chunks) {
-                // Create prompt for the specific chunk
-                const prompt = createPrompt(file, chunk, prDetails);
-
-                core.info(`----------------------------------------`);
-                core.info(`Prompt for chunk: ${prompt}`);
-                core.info(`----------------------------------------`);
-                // Send the chunk content to OpenAI for review
-                const response = await getAIResponse(openaiApiKey, model, prompt);
-
-                core.info(`Received response from OpenAI: ${JSON.stringify(response)}`);
-                if (response && response.length > 0) {
-                    // Add comments for each AI response
-                    for (const res of response) {
-                        const position = findPositionInChunk(chunk, res.lineNumber);
-
-                        core.info(`Found position ${position} for line ${res.lineNumber}`);
-
-                        if (position === -1) {
-                            core.info(`Skipping review for line ${res.lineNumber} as no matching position was found.`);
-                            continue;
+            const response = await axios.post(url, {
+                model: this.model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userPrompt },
+                ],
+                'response_format': {
+                    "type": "json_schema",
+                    "json_schema":
+                        {
+                            "name": "pull_request_reviews",
+                            "strict": true,
+                            "schema":
+                                {
+                                    "type": "object",
+                                    "properties":
+                                        {
+                                            "event":
+                                                {
+                                                    "type": "string",
+                                                    "description": "The event type indicating the nature of the change request. APPROVE to approve the pull request, REQUEST_CHANGES to request MUST changes, or COMMENT to comment on the pull request.",
+                                                    "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"]
+                                                },
+                                            "comments":
+                                                {
+                                                    "type": "array",
+                                                    "description": "A list of reviews provided for the pull request. Write LGTM! if no changes are requested.",
+                                                    "items":
+                                                        {
+                                                            "type": "object",
+                                                            "properties":
+                                                                {
+                                                                    "path":
+                                                                        {
+                                                                            "type": "string",
+                                                                            "description": "The file path where the change is requested."
+                                                                        },
+                                                                    "position":
+                                                                        {
+                                                                            "type": "number",
+                                                                            "description": "To determine the position, count the lines below the first '@@' hunk header in the file. The line immediately after the '@@' line is position 1, the next line is position 2, and so on. This position increases through whitespace and additional hunks until a new file begins."
+                                                                        },
+                                                                    "body":
+                                                                        {
+                                                                            "type": "string",
+                                                                            "description": "Single liner review comment. LGTM if no changes are requested."
+                                                                        }
+                                                                },
+                                                            "required": ["path", "position", "body"],
+                                                            "additionalProperties": false
+                                                        }
+                                                }
+                                        },
+                                    "required": ["event", "comments"],
+                                    "additionalProperties": false
+                                }
                         }
+                },
+                temperature: 1,
+                top_p: 1,
+                max_tokens: 16380,
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.openaiApiKey}`,
+                    "Content-Type": "application/json",
+                },
+                timeout: 300000, // 300 seconds
+            });
 
-                        // Check if a comment already exists on this position
-                        const existingComments = await getExistingReviewComments(octokit, repo.owner, repo.repo, prNumber);
-                        if (existingComments.some(comment => comment.path === file.to && comment.position === position)) {
-                            core.info(`Skipping duplicate comment on line ${res.lineNumber} at position ${position}.`);
-                            continue;
-                        }
+            const completion = response.data;
+            const review = JSON.parse(completion.choices[0].message.content);
 
-                        core.info(`Adding review comment for line ${res.lineNumber} at position ${position}`);
+            core.info("Review: " + JSON.stringify(review));
+            const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
+            const positions = prComments.map(comment => comment.position);
 
-                        await addReviewComment(octokit, repo.owner, repo.repo, prNumber, latestCommitSha, file.to, position, res.reviewComment);
+            // Prepare comments for the review
+            const reviewComments = review.comments.filter(comment => !positions.includes(comment.position)).map(comment => ({
+                path: comment.path,
+                position: comment.position,
+                body: comment.body,
+            }));
 
-                        core.info(`Added review comment for file: ${file.to} at position: ${position}`);
-                    }
-                }
+            if (reviewComments.length > 0) {
+                // Create the review
+                await this.octokit.rest.pulls.createReview({
+                    owner,
+                    repo,
+                    pull_number: pullRequestId,
+                    comments: reviewComments,
+                    event: review.event || "COMMENT", // Default to COMMENT if no event specified
+                });
             }
-        }
 
-    } catch (error) {
-        core.setFailed(error.message);
-    }
-}
+            core.info("-------------------");
+            core.info(`${reviewComments.length} Reviews added successfully!`);
+            core.info("-------------------");
 
-// Function to create a prompt for OpenAI
-function createPrompt(file, chunk, prDetails) {
-    return `
-        Your task is to review pull requests. Instructions:
-        - Provide the response in raw JSON format without any markdown or code blocks.
-        - Response format: {"reviews": [{"lineNumber": <line_number>, "reviewComment": "<review comment>"}]}
-        - Only suggest improvements; no compliments or comments if there is nothing to change.
-        - Write comments in GitHub Markdown format.
-
-        Review the following code diff in the file "${file.to}" considering the PR title and description:
-
-        Pull request title: ${prDetails.title}
-        Pull request description: ${prDetails.description}
-
-        Git diff to review:
-
-        ${chunk.content}
-        ${chunk.changes.map(c => `${c.ln || c.ln2} ${c.content}`).join('\n')}
-    `;
-}
-
-// Function to call OpenAI for review
-async function getAIResponse(apiKey, model, prompt) {
-    try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: model,
-            messages: [{ role: 'user', content: prompt }],
-            max_tokens: 500,
-            temperature: 0.2,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const res = response.data.choices[0].message.content.trim();
-        return JSON.parse(res).reviews || [];
-    } catch (error) {
-        core.error(`Error while calling OpenAI: ${error.message}`);
-        return null;
-    }
-}
-
-// Function to find the correct diff position from the chunk and line number
-function findPositionInChunk(chunk, lineNumber) {
-    core.info('Finding position for line number: ' + lineNumber);
-    core.info('Chunk: ' + JSON.stringify(chunk));
-    for (const change of chunk.changes) {
-        // Find the correct diff position by matching the line number from the diff
-        if ((change.ln || change.ln2) === lineNumber) {
-            return change.position; // The position in the diff
+        } catch (error) {
+            return {
+                error: error.message,
+            };
         }
     }
-    return -1; // Return -1 if no matching position is found
-}
 
-// Function to add a review comment to the pull request
-async function addReviewComment(octokit, owner, repo, pull_number, commit_id, path, position, body) {
-
-    core.info('owner: ' + owner);
-    core.info('pull_number: ' + pull_number);
-    core.info('commit_id: ' + commit_id);
-    core.info('path: ' + path);
-    core.info('position: ' + position);
-    core.info('body: ' + body);
-    try {
-        const response = await octokit.rest.pulls.createReviewComment({
+    async getPullRequestComments(owner, repo, pullRequestId) {
+        const { data } = await this.octokit.rest.pulls.listComments({
             owner,
             repo,
-            pull_number,
-            commit_id, // The latest commit SHA for the PR
-            path,      // File path within the PR
-            position,  // The position in the diff (not the line number!)
-            body,      // The comment body
+            pull_number: pullRequestId,
+        });
+        return data;
+    }
+
+    extractBlocks(diff) {
+        const fileExtensions = ["php", "js", "jsx"];
+        const blocks = [];
+        const lines = diff.split("\n");
+        let currentBlock = [];
+        let inBlock = false;
+        let currentFile = "";
+
+        lines.forEach(line => {
+            // Start of a new block.
+            if (line.startsWith("diff --git")) {
+                if (inBlock && currentBlock.length > 0) {
+                    if (this.matchesExtension(currentFile, fileExtensions)) {
+                        blocks.push(currentBlock.join("\n"));
+                    }
+                    currentBlock = [];
+                }
+
+                const matches = line.match(/diff --git a\/(.*) b\//);
+                currentFile = matches && matches[1] ? matches[1] : "";
+                inBlock = true;
+            }
+
+            // If we're in a block, keep adding lines to it.
+            if (inBlock) {
+                currentBlock.push(line);
+            }
         });
 
-        core.info(`Review comment added successfully at position ${position}`);
-        return response;
-    } catch (error) {
-        core.error(`Error while adding review comment: ${error.message}`);
-        throw error;
+        // Add the last block if necessary.
+        if (inBlock && this.matchesExtension(currentFile, fileExtensions)) {
+            blocks.push(currentBlock.join("\n"));
+        }
+
+        return blocks;
+    }
+
+    matchesExtension(file, fileExtensions) {
+        return fileExtensions.some(extension => file.endsWith(extension));
+    }
+
+    async run(pullRequestId) {
+
+        core.info("Reviewing the pull request...");
+
+        const result = await this.reviewPullRequest(pullRequestId);
+        console.log(result);
     }
 }
 
-// Function to retrieve existing review comments for the pull request
-async function getExistingReviewComments(octokit, owner, repo, pull_number) {
-    try {
-        const { data: comments } = await octokit.rest.pulls.listReviewComments({
-            owner,
-            repo,
-            pull_number,
-        });
-        return comments;
-    } catch (error) {
-        core.error(`Error while fetching existing comments: ${error.message}`);
-        return [];
-    }
-}
+// Usage
+const githubToken = core.getInput('GITHUB_TOKEN');
+const openaiApiKey = core.getInput('OPENAI_API_KEY');
+const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4o-mini';
 
-run();
+const reviewer = new PullRequestReviewer(githubToken, openaiApiKey, model);
+reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
+    .catch(error => console.error(error));

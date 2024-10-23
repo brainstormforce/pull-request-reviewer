@@ -109,18 +109,13 @@ class PullRequestReviewer {
                                                                             "type": "number",
                                                                             "description": "The position in the diff where you want to add a review comment. Sololy to + line. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file."
                                                                         },
-                                                                    "side":
-                                                                        {
-                                                                            "type": "string",
-                                                                            "description": "The side of the diff to which the comment applies can be either left or right. If you are adding a comment for a (+) change, select the right side; otherwise, choose the left side."
-                                                                        },
                                                                     "body":
                                                                         {
                                                                             "type": "string",
                                                                             "description": "Single liner review comment. LGTM if no changes are requested."
                                                                         }
                                                                 },
-                                                            "required": ["path", "position", "side", "body"],
+                                                            "required": ["path", "position", "body"],
                                                             "additionalProperties": false
                                                         }
                                                 }

@@ -4,6 +4,9 @@ const { GitHub, context } = require("@actions/github");
 const core = require("@actions/core");
 
 class PullRequestReviewer {
+
+    static extractedDiffs = [];
+
     constructor(githubToken, openaiApiKey, model) {
         this.octokit = new Octokit({ auth: githubToken });
         this.openaiApiKey = openaiApiKey;
@@ -31,7 +34,7 @@ class PullRequestReviewer {
                 mediaType: { format: "diff" },
             });
 
-            const extractedDiffs = this.extractBlocks(diff);
+            this.constructor.extractedDiffs = this.extractBlocks(diff);
             const diffText = extractedDiffs.join("\n\n");
 
             const prTitle = prDetails.title || "";
@@ -144,6 +147,13 @@ class PullRequestReviewer {
             core.info("-------------------");
 
             const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
+
+
+
+            this.dismissPullRequestReview(pullRequestId, prComments);
+
+
+
             const positions = prComments.map(comment => comment.position);
 
             // Prepare comments for the review
@@ -175,6 +185,95 @@ class PullRequestReviewer {
         }
     }
 
+    async dismissPullRequestReview(pullRequestId, prComments) {
+        const owner = context.repo.owner;
+        const repo = context.repo.repo;
+        for(const comment of prComments) {
+            if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
+
+                core.info("Dismissing review comment...");
+
+                // check if path exists in extractedDiffs
+                const path = comment.path;
+                const extractedDiffs = this.constructor.extractedDiffs;
+                const file = extractedDiffs.find(file => file[path]);
+
+                // Get the comment
+                const commentText = comment.body;
+
+                const userPrompt = `
+                Code snippet:
+                
+                ${file[path]}
+                
+                Review Comment: 
+                
+                ${commentText}
+                `;
+
+                if(file) {
+
+                    const response = await axios.post(url, {
+                        model: this.model,
+                        messages: [
+                            { role: "system", content: 'You are an experienced software reviewer. Please verify the code snippet and determine whether the provided review has been addressed.' },
+                            { role: "user", content: userPrompt },
+                        ],
+                        'response_format': {
+                            "type": "json_schema",
+                            "json_schema":
+                                {
+                                    "name": "pull_request_review_verify",
+                                    "strict": true,
+                                    "schema":
+                                        {
+                                            "type": "object",
+                                            "properties":
+                                                {
+                                                    "status":
+                                                        {
+                                                            "type": "string",
+                                                            "description": "RESOLVED if the review comment has been addressed, UNRESOLVED if the review comment has not been addressed.",
+                                                            "enum": ["RESOLVED", "UNRESOLVED"]
+                                                        }
+                                                },
+                                            "required": ["status"],
+                                            "additionalProperties": false
+                                        }
+                                }
+                        },
+                        temperature: 1,
+                        top_p: 1,
+                        max_tokens: 2000,
+                    }, {
+                        headers: {
+                            Authorization: `Bearer ${this.openaiApiKey}`,
+                            "Content-Type": "application/json",
+                        },
+                        timeout: 300000, // 300 seconds
+                    });
+
+                    const completion = response.data;
+                    const review = JSON.parse(completion.choices[0].message.content);
+
+                    if(review.status === "RESOLVED") {
+
+                        // Dismiss review
+                        await this.octokit.rest.pulls.dismissReview({
+                            owner,
+                            repo,
+                            pull_number: pullRequestId,
+                            review_id: comment.pull_request_review_id,
+                            message: "Resolved. Thank you :thumbsup:",
+                        });
+                        core.info("Review dismissed successfully!");
+                    }
+
+                }
+        }
+        }
+    }
+
     async getPullRequestComments(owner, repo, pullRequestId) {
         const { data } = await this.octokit.rest.pulls.listReviewComments({
             owner,
@@ -197,7 +296,7 @@ class PullRequestReviewer {
             if (line.startsWith("diff --git")) {
                 if (inBlock && currentBlock.length > 0) {
                     if (this.matchesExtension(currentFile, fileExtensions)) {
-                        blocks.push(currentBlock.join("\n"));
+                        blocks.push({ [currentFile]: currentBlock.join("\n") });
                     }
                     currentBlock = [];
                 }
@@ -215,7 +314,7 @@ class PullRequestReviewer {
 
         // Add the last block if necessary.
         if (inBlock && this.matchesExtension(currentFile, fileExtensions)) {
-            blocks.push(currentBlock.join("\n"));
+            blocks.push({ [currentFile]: currentBlock.join("\n") });
         }
 
         return blocks;

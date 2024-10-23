@@ -193,18 +193,19 @@ class PullRequestReviewer {
 
 
                 core.info("Dismissing review comment...");
-                core.info(JSON.stringify(comment));
+
 
 
 
 
                 // check if path exists in extractedDiffs
                 const path = comment.path;
+                core.info('Path: ' + path);
                 const extractedDiffs = this.constructor.extractedDiffs;
+                core.info(JSON.stringify(extractedDiffs));
                 const file = extractedDiffs.find(file => file[path]);
+                core.info(JSON.stringify(file));
 
-                core.info(extractedDiffs);
-                core.info(file);
 
                 // Get the comment
                 const commentText = comment.body;

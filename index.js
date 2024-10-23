@@ -191,10 +191,11 @@ class PullRequestReviewer {
         for(const comment of prComments) {
             if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 
-                core.info('-------------------');
-                core.info("Dismissing review comment...");
 
-                core.info(comment);
+                core.info("Dismissing review comment...");
+                core.info(JSON.stringify(comment));
+
+
 
 
                 // check if path exists in extractedDiffs

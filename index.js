@@ -151,7 +151,7 @@ class PullRequestReviewer {
     }
 
     async getPullRequestComments(owner, repo, pullRequestId) {
-        const { data } = await this.octokit.rest.pulls.listComments({
+        const { data } = await this.octokit.rest.pulls.listReviewComments({
             owner,
             repo,
             pull_number: pullRequestId,

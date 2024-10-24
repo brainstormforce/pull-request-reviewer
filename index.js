@@ -36,23 +36,23 @@ class PullRequestReviewer {
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
 
-            // /**
-            //  * Adding position to each line in the diff.
-            //  */
-            // this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
-            //     const path = Object.keys(file)[0];
-            //     const lines = file[path].split("\n");
-            //     let position = 0;
-            //     return {
-            //         [path]: lines.map(line => {
-            //             if (line.startsWith("@@")) {
-            //                 position = -1;
-            //             }
-            //             position++;
-            //             return `${position} ${line}`;
-            //         }).join("\n")
-            //     };
-            // });
+            /**
+             * Adding position to each line in the diff.
+             */
+            this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
+                const path = Object.keys(file)[0];
+                const lines = file[path].split("\n");
+                let position = 0;
+                return {
+                    [path]: lines.map(line => {
+                        if (line.startsWith("@@")) {
+                            position = -1;
+                        }
+                        position++;
+                        return `${position} ${line}`;
+                    }).join("\n")
+                };
+            });
 
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 
@@ -386,6 +386,9 @@ class PullRequestReviewer {
         const token = core.getInput('JIRA_TOKEN');
         const jiraBaseUrl = core.getInput('JIRA_BASE_URL');
         const url = `${jiraBaseUrl}/rest/api/2/issue/${task_id}`;
+
+        core.info('JIRA URL: ' + url);
+
         const response = await axios.get(url, {
             headers: {
                 'Authorization': `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`

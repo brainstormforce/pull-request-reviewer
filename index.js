@@ -35,6 +35,9 @@ class PullRequestReviewer {
             });
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
+
+            core.info('Extracted Diffs: ' + JSON.stringify(this.constructor.extractedDiffs, null, 2));
+
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 
             const prTitle = prDetails.title || "";
@@ -389,6 +392,7 @@ class PullRequestReviewer {
 
     extractBlocks(diff) {
         const fileExtensions = ["php", "js", "jsx"];
+        const excludedFolders = ["vendor", "build", "dist", "node_modules"];
         const blocks = [];
         const lines = diff.split("\n");
         let currentBlock = [];
@@ -407,7 +411,13 @@ class PullRequestReviewer {
 
                 const matches = line.match(/diff --git a\/(.*) b\//);
                 currentFile = matches && matches[1] ? matches[1] : "";
-                inBlock = true;
+
+                // Exclude files in vendor, build, and dist folders
+                if (excludedFolders.some(folder => currentFile.startsWith(folder))) {
+                    inBlock = false; // Skip the current block
+                } else {
+                    inBlock = true;
+                }
             }
 
             // If we're in a block, keep adding lines to it.
@@ -423,6 +433,7 @@ class PullRequestReviewer {
 
         return blocks;
     }
+
 
     matchesExtension(file, fileExtensions) {
         return fileExtensions.some(extension => file.endsWith(extension));

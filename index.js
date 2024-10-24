@@ -54,14 +54,7 @@ class PullRequestReviewer {
                 };
             });
 
-            core.info("Extracted Diffs: " + JSON.stringify(this.constructor.extractedDiffs));
-
-
             const diffText = this.constructor.extractedDiffs.map(obj => Object.values(obj)[0]).join('\n\n');
-
-            core.info("Diff Text: " + diffText);
-
-            exit();
 
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
@@ -148,7 +141,9 @@ class PullRequestReviewer {
              
              **Code Snippet:** 
              
+             \`\`\`
              ${diffText}
+              \`\`\`
              
              `;
 

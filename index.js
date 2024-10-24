@@ -96,10 +96,10 @@ class PullRequestReviewer {
 
 
                 if(task_id) {
-                   core.info("Found Task ID: " + task_id);
-                   jiraTaskDetails = await this.getJiraTaskDetails(task_id);
+                    core.info("Found Task ID: " + task_id);
+                    jiraTaskDetails = await this.getJiraTaskDetails(task_id);
 
-                   core.info('JIRA Task Details: ' + JSON.stringify(jiraTaskDetails));
+                    core.info('JIRA Task Details: ' + JSON.stringify(jiraTaskDetails));
 
                 }
 
@@ -231,32 +231,29 @@ class PullRequestReviewer {
 
             const positions = prComments.map(comment => comment.position);
 
-            // Prepare comments for the review
-            const reviewComments = review.comments.filter(comment => !positions.includes(comment.position)).map(comment => ({
+            // Prepare comments for the review by removing the comments that are already present in the PR and comments that contain LGTM.
+            const reviewComments = review.comments.filter(comment => !positions.includes(comment.position) && !comment.body.includes('LGTM') ).map(comment => ({
                 path: comment.path,
                 position: comment.position,
                 body: comment.body,
             }));
 
-            if (reviewComments.length > 0) {
-                // Create the review
-                await this.octokit.rest.pulls.createReview({
-                    owner,
-                    repo,
-                    pull_number: pullRequestId,
-                    comments: reviewComments,
-                    event: review.event || "COMMENT", // Default to COMMENT if no event specified
-                });
-            }
+            core.info('Final Review Comments: ' + JSON.stringify(reviewComments));
+
+            await this.octokit.rest.pulls.createReview({
+                owner,
+                repo,
+                pull_number: pullRequestId,
+                comments: reviewComments || [],
+                event: review.event || "COMMENT", // Default to COMMENT if no event specified
+            });
 
             core.info("-------------------");
             core.info(`${reviewComments.length} Reviews added successfully!`);
             core.info("-------------------");
 
         } catch (error) {
-            return {
-                error: error.message,
-            };
+            core.error(error.message);
         }
     }
 

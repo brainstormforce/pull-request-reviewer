@@ -27,7 +27,7 @@ class PullRequestReviewer {
                 pull_number: pullRequestId,
             });
 
-            core.info("Changed Files: " + JSON.stringify(changedFiles.data));
+            core.info("Changed Files: " + JSON.stringify(changedFiles));
             exit(0);
 
 

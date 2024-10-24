@@ -40,8 +40,6 @@ class PullRequestReviewer {
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
 
-            core.info("PR Title: " + prTitle);
-
             let jiraTaskDetails = {};
 
             const url = "https://api.openai.com/v1/chat/completions";
@@ -56,7 +54,7 @@ class PullRequestReviewer {
                         { role: "system", content: 'Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name' },
                         { role: "user", content: prTitle},
                     ],
-                    'response_format': {
+                    response_format: {
                         "type": "json_schema",
                         "json_schema":
                             {

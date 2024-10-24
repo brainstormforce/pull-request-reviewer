@@ -54,6 +54,10 @@ class PullRequestReviewer {
                 };
             });
 
+            core.info("Extracted Diffs: " + JSON.stringify(this.constructor.extractedDiffs));
+
+            exit(0);
+
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 
             const prTitle = prDetails.title || "";
@@ -144,9 +148,6 @@ class PullRequestReviewer {
              ${diffText}
              
              `;
-
-
-            core.info('Diff Text: ' + diffText);
 
             // Append to user context if jiraTaskDetails preset.
             if(jiraTaskDetails.taskSummary) {

@@ -110,12 +110,12 @@ class PullRequestReviewer {
             const systemPrompt = `
             You are an experienced software reviewer. You will be given an incomplete code fragment where:
                 - Lines starting with '+' represent newly added code (focus only on these).
-                - Lines starting with '-' represent removed code (ignore these).
+                - Lines starting with '-' represent removed code.
             Task: Refactor, optimize, and validate the newly added lines. If no improvements are needed, respond with "LGTM!" and use the APPROVE event.    
             Instructions:
             - Cross-check the complete code against the relevant JIRA task and provide suggestions if necessary.
             - Provide specific code improvements focused on performance, readability, or best practices, using backticks for any code suggestions.
-            - Avoid explanations, compliments, or general feedback.
+            - Strictly DO NOT provide explanations, compliments, or general feedback.
             `;
 
             let userPrompt = `

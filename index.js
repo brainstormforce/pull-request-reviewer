@@ -35,10 +35,7 @@ class PullRequestReviewer {
             });
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
-            // Append the position to each file's line string.
-            // Position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment.
-            // The line just below the "@@" line is position 1, the next line is position 2, and so on.
-            // The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file.
+
             this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
                 const path = Object.keys(file)[0];
                 const lines = file[path].split("\n");
@@ -46,7 +43,7 @@ class PullRequestReviewer {
                 return {
                     [path]: lines.map(line => {
                         if (line.startsWith("@@")) {
-                            position = 0;
+                            position = -1;
                         }
                         position++;
                         return `${position} ${line}`;

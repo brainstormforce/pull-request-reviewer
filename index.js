@@ -432,5 +432,12 @@ const openaiApiKey = core.getInput('OPENAI_API_KEY');
 const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4o-mini';
 
 const reviewer = new PullRequestReviewer(githubToken, openaiApiKey, model);
-reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
-    .catch(error => console.error(error));
+
+try {
+    reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
+        .catch(error => console.error(error));
+} catch (error) {
+    console.error(error);
+    core.error(error);
+}
+

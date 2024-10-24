@@ -4,6 +4,15 @@ inputs:
   GITHUB_TOKEN:
     description: "GitHub token to interact with the repository."
     required: true
+  JIRA_BASE_URL:
+    description: "JIRA base URL."
+    required: true
+  JIRA_USERNAME:
+    description: "JIRA username."
+    required: true
+  JIRA_TOKEN:
+    description: "JIRA token."
+    required: true
   OPENAI_API_KEY:
     description: "OpenAI API key for GPT."
     required: true

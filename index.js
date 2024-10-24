@@ -412,8 +412,8 @@ class PullRequestReviewer {
                 const matches = line.match(/diff --git a\/(.*) b\//);
                 currentFile = matches && matches[1] ? matches[1] : "";
 
-                // Exclude files in vendor, build, and dist folders
-                if (excludedFolders.some(folder => currentFile.startsWith(folder))) {
+                // Exclude files if the path contains any of the excluded folders
+                if (excludedFolders.some(folder => currentFile.includes(folder))) {
                     inBlock = false; // Skip the current block
                 } else {
                     inBlock = true;

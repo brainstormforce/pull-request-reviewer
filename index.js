@@ -22,14 +22,7 @@ class PullRequestReviewer {
         const includePaths = core.getInput('INCLUDE_PATHS') || [];
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
 
-        const getFilteredChangedFiles = (changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths) => {
-            const stringToArray = (inputString) => inputString.split(',').map(item => item.trim().replace(/\\/g, '/')).filter(Boolean);
-
-            const includeExtensionsArray = stringToArray(includeExtensions);
-            const excludeExtensionsArray = stringToArray(excludeExtensions);
-            const includePathsArray = stringToArray(includePaths);
-            const excludePathsArray = stringToArray(excludePaths);
-
+        const getFilteredChangedFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
                 const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
                 const isExcludedExtension = excludeExtensionsArray.length > 0 && excludeExtensionsArray.some(ext => filename.endsWith(ext));

@@ -154,7 +154,8 @@ class PullRequestReviewer {
             }
 
 
-            const filePaths = this.constructor.extractedDiffs.map(file => file.path);
+            // Prepare the array of paths from the extractedDiffs
+            const filePaths = this.constructor.extractedDiffs.map(file => Object.keys(file)[0]);
 
             core.info('File Paths: ' + JSON.stringify(filePaths));
 

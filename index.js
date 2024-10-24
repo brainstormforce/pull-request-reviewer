@@ -21,7 +21,7 @@ class PullRequestReviewer {
         try {
 
             // List all PR files
-            const changedFiles = await this.octokit.rest.pulls.listFiles({
+            const { data: changedFiles } = await this.octokit.rest.pulls.listFiles({
                 owner,
                 repo,
                 pull_number: pullRequestId,

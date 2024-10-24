@@ -39,9 +39,61 @@ class PullRequestReviewer {
 
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
+            let jiraTaskDetails = {};
+
+            const url = "https://api.openai.com/v1/chat/completions";
+
+            // Extract the JIRA Task ID from the PR title
+            if(prTitle) {
+
+                // OpenAI API request to extract the JIRA Task ID
+                const response = await axios.post(url, {
+                    model: this.model,
+                    messages: [
+                        { role: "system", content: 'Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name' },
+                        { role: "user", content: prTitle},
+                    ],
+                    'response_format': {
+                        "type": "json_schema",
+                        "json_schema":
+                            {
+                                "name": "pr_title_task_id",
+                                "strict": true,
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "task_id": {
+                                            "type": "string",
+                                            "description": "The extracted task ID from the pull request title."
+                                        }
+                                    },
+                                    "required": [
+                                        "task_id"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                    },
+                    temperature: 1,
+                    top_p: 1,
+                    max_tokens: 200,
+                });
+                const completion = response.data;
+                const task_id = JSON.parse(completion.choices[0].message.content).task_id;
+
+
+                if(task_id) {
+                   core.info("Found Task ID: " + task_id);
+                   jiraTaskDetails = await this.getJiraTaskDetails(task_id);
+
+                   core.info('JIRA Task Details: ' + JSON.stringify(jiraTaskDetails));
+
+                }
+
+            }
 
             // Prepare OpenAI API request
-            const url = "https://api.openai.com/v1/chat/completions";
+
             const systemPrompt = `
             You are an experienced software reviewer. 
             You will be given a code snippet which represents incomplete code fragments annotated with line numbers and old hunks (replaced code). 
@@ -54,8 +106,8 @@ class PullRequestReviewer {
                 - The event APPROVE must be used if no significant changes are recommended for actionable reviews.
                 `;
 
-            const userPrompt = `
-            Review the following code diff and take the PR title and description into account when writing the review.
+            let userPrompt = `
+            Review the following code diff and take the PR title, description & Jira Task, description if any into account when writing the review.
              **PR Title:** 
              
              ${prTitle} 
@@ -69,6 +121,20 @@ class PullRequestReviewer {
              ${diffText}
              
              `;
+
+            // Append to user context if jiraTaskDetails preset.
+            if(jiraTaskDetails.taskSummary) {
+                userPrompt += `
+                **JIRA Task Summary:** 
+                
+                ${jiraTaskDetails.taskSummary}
+                
+                **JIRA Task Description:**
+                
+                ${jiraTaskDetails.taskDescription}
+                `;
+            }
+
 
             const response = await axios.post(url, {
                 model: this.model,
@@ -214,6 +280,9 @@ class PullRequestReviewer {
 
                 if(file) {
 
+                    // Get the JIRA Task title and description
+
+
                     const response = await axios.post(url, {
                         model: this.model,
                         messages: [
@@ -272,6 +341,29 @@ class PullRequestReviewer {
                 }
             }
         }
+    }
+
+    async getJiraTaskDetails(task_id) {
+
+        const username = core.getInput('JIRA_USERNAME');
+        const token = core.getInput('JIRA_TOKEN');
+        const jiraBaseUrl = core.getInput('JIRA_BASE_URL');
+        const url = `${jiraBaseUrl}/rest/api/2/issue/${task_id}`;
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`
+            }
+        });
+
+        const taskDetails = response.data;
+        const taskSummary = taskDetails.fields.summary;
+        const taskDescription = taskDetails.fields.description;
+
+        return {
+            taskSummary,
+            taskDescription
+        }
+
     }
 
     async getPullRequestComments(owner, repo, pullRequestId) {

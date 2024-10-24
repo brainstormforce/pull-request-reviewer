@@ -52,7 +52,7 @@ class PullRequestReviewer {
                 const response = await axios.post(url, {
                     model: this.model,
                     messages: [
-                        { role: "system", content: 'Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name' },
+                        { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
                         { role: "user", content: prTitle},
                     ],
                     response_format: {
@@ -83,6 +83,9 @@ class PullRequestReviewer {
 
                 core.info('Response: ' + JSON.stringify(response.data));
                 const completion = response.data;
+
+                core.info('Completion: ' + JSON.stringify(completion));
+
                 const task_id = JSON.parse(completion.choices[0].message.content).task_id;
 
 

@@ -36,7 +36,7 @@ class PullRequestReviewer {
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
 
-            core.info('Extracted Diffs: ' + JSON.stringify(this.constructor.extractedDiffs, null, 2));
+            //core.info('Extracted Diffs: ' + JSON.stringify(this.constructor.extractedDiffs, null, 2));
 
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 
@@ -154,6 +154,11 @@ class PullRequestReviewer {
             }
 
 
+            const filePaths = this.constructor.extractedDiffs.map(file => file.path);
+
+            core.info('File Paths: ' + JSON.stringify(filePaths));
+
+
             const response = await axios.post(url, {
                 model: this.model,
                 messages: [
@@ -194,7 +199,7 @@ class PullRequestReviewer {
                                                                     "position":
                                                                         {
                                                                             "type": "number",
-                                                                            "description": "The position in the diff where you want to add a review comment. Sololy to + line. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file."
+                                                                            "description": "The position in the diff where you want to add a review comment. Solely to + line. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file."
                                                                         },
                                                                     "body":
                                                                         {

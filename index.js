@@ -39,6 +39,9 @@ class PullRequestReviewer {
 
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
+
+            core.info("PR Title: " + prTitle);
+
             let jiraTaskDetails = {};
 
             const url = "https://api.openai.com/v1/chat/completions";

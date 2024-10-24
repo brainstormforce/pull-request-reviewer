@@ -53,10 +53,10 @@ class PullRequestReviewer {
 
             const reviewableFiles = getreviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
-            const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullNumber);
+            const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
             const fileCommentator = (comment, filePath, line) => {
-                githubHelper.createReviewComment(owner, repo, pullNumber, pullRequestData.head.sha, comment, filePath, line);
+                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line);
             }
 
             const AiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);

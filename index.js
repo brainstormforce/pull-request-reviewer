@@ -108,16 +108,15 @@ class PullRequestReviewer {
             // Prepare OpenAI API request
 
             const systemPrompt = `
-            You are an experienced software reviewer. 
-            You will be given a code snippet which represents incomplete code fragments annotated with line numbers and old hunks (replaced code). 
-            Focus solely on the '+' (added) lines in the provided code snippet and ignore the rest of the code snippet. 
-            Refactor and optimize the code snippet and provide feedback only for potential improvements on newly added code if necessary. 
-            Else directly write "LGTM!" as a review. 
-            Instructions: 
-                - Do not provide compliments, general feedback, summaries, explanations, or praise for changes. 
-                - Use backticks if any code improvement is suggested.
-                - The event APPROVE must be used if no significant changes are recommended for actionable reviews.
-                `;
+            You are an experienced software reviewer. You will be given an incomplete code fragment where:
+                - Lines starting with '+' represent newly added code (focus only on these).
+                - Lines starting with '-' represent removed code (ignore these).
+            Task: Refactor, optimize, and validate the newly added lines. If no improvements are needed, respond with "LGTM!" and use the APPROVE event.    
+            Instructions:
+            - Cross-check the complete code against the relevant JIRA task and provide suggestions if necessary.
+            - Provide specific code improvements focused on performance, readability, or best practices, using backticks for any code suggestions.
+            - Avoid explanations, compliments, or general feedback.
+            `;
 
             let userPrompt = `
             Review the following code diff and take the PR title, description & Jira Task, description if any into account when writing the review.
@@ -137,6 +136,9 @@ class PullRequestReviewer {
 
             // Append to user context if jiraTaskDetails preset.
             if(jiraTaskDetails.taskSummary) {
+
+                core.info('Using JIRA Task Details in the user prompt...');
+
                 userPrompt += `
                 **JIRA Task Summary:** 
                 

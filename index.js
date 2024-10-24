@@ -56,8 +56,6 @@ class PullRequestReviewer {
 
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 
-            core.info('Diff Text: ' + diffText);
-
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";
 
@@ -68,7 +66,6 @@ class PullRequestReviewer {
             // Extract the JIRA Task ID from the PR title
             if(prTitle) {
 
-                core.info('Call to extract the Key from the PR title');
                 // OpenAI API request to extract the JIRA Task ID
                 const response = await axios.post(url, {
                     model: this.model,
@@ -108,13 +105,9 @@ class PullRequestReviewer {
                     timeout: 300000, // 300 seconds
                 });
 
-                core.info('Response: ' + JSON.stringify(response.data));
                 const completion = response.data;
 
-                core.info('Completion: ' + JSON.stringify(completion));
-
                 const task_id = JSON.parse(completion.choices[0].message.content).task_id;
-
 
                 if(task_id) {
                     core.info("Found Task ID: " + task_id);
@@ -171,9 +164,6 @@ class PullRequestReviewer {
 
             // Prepare the array of paths from the extractedDiffs
             const filePaths = this.constructor.extractedDiffs.map(file => Object.keys(file)[0]);
-
-            core.info('File Paths: ' + JSON.stringify(filePaths));
-
 
             const response = await axios.post(url, {
                 model: this.model,

@@ -3,6 +3,9 @@ const axios = require("axios");
 const { GitHub, context } = require("@actions/github");
 const core = require("@actions/core");
 
+const AiHelper = require("./AiHelper");
+const GithubHelper = require("./GithubHelper");
+
 class PullRequestReviewer {
 
     static extractedDiffs = [];
@@ -22,7 +25,11 @@ class PullRequestReviewer {
         const includePaths = core.getInput('INCLUDE_PATHS') || [];
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
 
-        const getFilteredChangedFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
+        const githubToken = core.getInput('GITHUB_TOKEN');
+
+        const githubHelper = new GithubHelper(githubToken);
+
+        const getreviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
                 const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
                 const isExcludedExtension = excludeExtensionsArray.length > 0 && excludeExtensionsArray.some(ext => filename.endsWith(ext));
@@ -44,21 +51,18 @@ class PullRequestReviewer {
                 pull_number: pullRequestId,
             });
 
-            const filteredChangedFiles = getFilteredChangedFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
+            const reviewableFiles = getreviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
+            const pullRequestData = await githubAPI.getPullRequest(owner, repo, pullNumber);
+            const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
+            const fileCommentator = (comment, filePath, line) => {
+                githubHelper.createReviewComment(owner, repo, pullNumber, pullRequestData.head.sha, comment, filePath, line);
+            }
 
-            core.info("Changed Files: " + JSON.stringify(filteredChangedFiles, null, 2));
+            const AiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
+            await AiHelper.executeCodeReview(reviewableFiles);
+
             process.exit(0);
-
-
-
-            // Get PR details
-            const { data: prDetails } = await this.octokit.rest.pulls.get({
-                owner,
-                repo,
-                pull_number: pullRequestId,
-            });
-
             // Fetch the PR diff
             const { data: diff } = await this.octokit.rest.pulls.get({
                 owner,

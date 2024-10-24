@@ -36,23 +36,23 @@ class PullRequestReviewer {
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
 
-            /**
-             * Adding position to each line in the diff.
-             */
-            this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
-                const path = Object.keys(file)[0];
-                const lines = file[path].split("\n");
-                let position = 0;
-                return {
-                    [path]: lines.map(line => {
-                        if (line.startsWith("@@")) {
-                            position = -1;
-                        }
-                        position++;
-                        return `${position} ${line}`;
-                    }).join("\n")
-                };
-            });
+            // /**
+            //  * Adding position to each line in the diff.
+            //  */
+            // this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
+            //     const path = Object.keys(file)[0];
+            //     const lines = file[path].split("\n");
+            //     let position = 0;
+            //     return {
+            //         [path]: lines.map(line => {
+            //             if (line.startsWith("@@")) {
+            //                 position = -1;
+            //             }
+            //             position++;
+            //             return `${position} ${line}`;
+            //         }).join("\n")
+            //     };
+            // });
 
             const diffText = this.constructor.extractedDiffs.join("\n\n");
 

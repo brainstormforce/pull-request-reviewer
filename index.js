@@ -36,6 +36,9 @@ class PullRequestReviewer {
 
             this.constructor.extractedDiffs = this.extractBlocks(diff);
 
+            /**
+             * Adding position to each line in the diff.
+             */
             this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
                 const path = Object.keys(file)[0];
                 const lines = file[path].split("\n");
@@ -51,11 +54,9 @@ class PullRequestReviewer {
                 };
             });
 
-            core.info('Extracted Diffs: ' + JSON.stringify(this.constructor.extractedDiffs, null, 2));
-
-            exit(0);
-
             const diffText = this.constructor.extractedDiffs.join("\n\n");
+
+            core.info('Diff Text: ' + diffText);
 
             const prTitle = prDetails.title || "";
             const prDescription = prDetails.body || "";

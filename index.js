@@ -101,9 +101,6 @@ class PullRequestReviewer {
                 if(task_id) {
                     core.info("Found Task ID: " + task_id);
                     jiraTaskDetails = await this.getJiraTaskDetails(task_id);
-
-                    core.info('JIRA Task Details: ' + JSON.stringify(jiraTaskDetails));
-
                 }
 
             }
@@ -119,6 +116,7 @@ class PullRequestReviewer {
             - Cross-check the complete code against the relevant JIRA task and provide suggestions if necessary.
             - Provide specific code improvements focused on performance, readability, or best practices, using backticks for any code suggestions.
             - Strictly DO NOT provide explanations, compliments, or general feedback.
+            - Calculate position in the diff where you want to add a review comment. Solely to + line. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file.
             `;
 
             let userPrompt = `
@@ -195,12 +193,13 @@ class PullRequestReviewer {
                                                                     "path":
                                                                         {
                                                                             "type": "string",
-                                                                            "description": "The relative path to the file that necessitates a comment."
+                                                                            "description": "The relative path to the file that necessitates a comment.",
+                                                                            "enum": filePaths
                                                                         },
                                                                     "position":
                                                                         {
                                                                             "type": "number",
-                                                                            "description": "The position in the diff where you want to add a review comment. Solely to + line. The position value equals the number of lines down from the first \"@@\" hunk header in the file you want to add a comment. The line just below the \"@@\" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file."
+                                                                            "description": "Position in the file where you adding a comment."
                                                                         },
                                                                     "body":
                                                                         {

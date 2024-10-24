@@ -148,11 +148,7 @@ class PullRequestReviewer {
 
             const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
 
-
-
-            this.dismissPullRequestReview(pullRequestId, prComments);
-
-
+            await this.dismissPullRequestReview(pullRequestId, prComments);
 
             const positions = prComments.map(comment => comment.position);
 
@@ -274,7 +270,7 @@ class PullRequestReviewer {
                     }
 
                 }
-        }
+            }
         }
     }
 

@@ -19,6 +19,19 @@ class PullRequestReviewer {
         const repo = context.repo.repo;
 
         try {
+
+            // List all PR files
+            const changedFiles = await this.octokit.rest.pulls.listFiles({
+                owner,
+                repo,
+                pull_number: pullRequestId,
+            });
+
+            core.info("Changed Files: " + JSON.stringify(changedFiles.data));
+            exit(0);
+
+
+
             // Get PR details
             const { data: prDetails } = await this.octokit.rest.pulls.get({
                 owner,
@@ -141,7 +154,7 @@ class PullRequestReviewer {
              
              **Code Snippet:** 
              
-             \`\`\`
+             \`\`\`diff
              ${diffText}
               \`\`\`
              
@@ -457,6 +470,8 @@ class PullRequestReviewer {
     }
 
     async run(pullRequestId) {
+
+
 
         core.info("Reviewing the pull request...");
 

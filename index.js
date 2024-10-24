@@ -59,8 +59,8 @@ class PullRequestReviewer {
                 githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line);
             }
 
-            const AiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
-            await AiHelper.executeCodeReview(reviewableFiles);
+            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
+            await aiHelper.executeCodeReview(reviewableFiles);
 
             process.exit(0);
             // Fetch the PR diff

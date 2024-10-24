@@ -47,6 +47,7 @@ class PullRequestReviewer {
             // Extract the JIRA Task ID from the PR title
             if(prTitle) {
 
+                core.info('Call to extract the Key from the PR title');
                 // OpenAI API request to extract the JIRA Task ID
                 const response = await axios.post(url, {
                     model: this.model,
@@ -79,6 +80,8 @@ class PullRequestReviewer {
                     top_p: 1,
                     max_tokens: 200,
                 });
+
+                core.info('Response: ' + JSON.stringify(response.data));
                 const completion = response.data;
                 const task_id = JSON.parse(completion.choices[0].message.content).task_id;
 
@@ -437,7 +440,6 @@ try {
     reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
         .catch(error => console.error(error));
 } catch (error) {
-    console.error(error);
-    core.error(error);
+    core.error(error.message);
 }
 

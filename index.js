@@ -17,6 +17,30 @@ class PullRequestReviewer {
     async reviewPullRequest(pullRequestId) {
         const owner = context.repo.owner;
         const repo = context.repo.repo;
+        const includeExtensions = core.getInput('INCLUDE_EXTENSIONS') || ["php", "js", "jsx"];
+        const excludeExtensions = core.getInput('EXCLUDE_EXTENSIONS') || [];
+        const includePaths = core.getInput('INCLUDE_PATHS') || [];
+        const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
+
+        const getFilteredChangedFiles = (changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths) => {
+            const stringToArray = (inputString) => inputString.split(',').map(item => item.trim().replace(/\\/g, '/')).filter(Boolean);
+
+            const includeExtensionsArray = stringToArray(includeExtensions);
+            const excludeExtensionsArray = stringToArray(excludeExtensions);
+            const includePathsArray = stringToArray(includePaths);
+            const excludePathsArray = stringToArray(excludePaths);
+
+            const isFileToReview = (filename) => {
+                const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
+                const isExcludedExtension = excludeExtensionsArray.length > 0 && excludeExtensionsArray.some(ext => filename.endsWith(ext));
+                const isIncludedPath = includePathsArray.length === 0 || includePathsArray.some(path => filename.startsWith(path));
+                const isExcludedPath = excludePathsArray.length > 0 && excludePathsArray.some(path => filename.startsWith(path));
+
+                return isIncludedExtension && !isExcludedExtension && isIncludedPath && !isExcludedPath;
+            };
+
+            return changedFiles.filter(file => isFileToReview(file.filename.replace(/\\/g, '/')));
+        };
 
         try {
 
@@ -27,7 +51,10 @@ class PullRequestReviewer {
                 pull_number: pullRequestId,
             });
 
-            core.info("Changed Files: " + JSON.stringify(changedFiles));
+            const filteredChangedFiles = getFilteredChangedFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
+
+
+            core.info("Changed Files: " + JSON.stringify(filteredChangedFiles));
             exit(0);
 
 

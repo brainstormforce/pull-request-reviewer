@@ -79,6 +79,12 @@ class PullRequestReviewer {
                     temperature: 1,
                     top_p: 1,
                     max_tokens: 200,
+                },{
+                    headers: {
+                        Authorization: `Bearer ${this.openaiApiKey}`,
+                        "Content-Type": "application/json",
+                    },
+                    timeout: 300000, // 300 seconds
                 });
 
                 core.info('Response: ' + JSON.stringify(response.data));

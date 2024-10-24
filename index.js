@@ -47,8 +47,8 @@ class PullRequestReviewer {
             const filteredChangedFiles = getFilteredChangedFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
 
-            core.info("Changed Files: " + JSON.stringify(filteredChangedFiles));
-            exit(0);
+            core.info("Changed Files: " + JSON.stringify(filteredChangedFiles, null, 2));
+            process.exit(0);
 
 
 

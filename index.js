@@ -145,6 +145,9 @@ class PullRequestReviewer {
              
              `;
 
+
+            core.info('Diff Text: ' + diffText);
+
             // Append to user context if jiraTaskDetails preset.
             if(jiraTaskDetails.taskSummary) {
 

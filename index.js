@@ -206,7 +206,7 @@ class PullRequestReviewer {
                                                                     "position":
                                                                         {
                                                                             "type": "number",
-                                                                            "description": "Position in the file where you adding a comment."
+                                                                            "description": "Position in the file where you adding a comment. Start of the line indicates the position."
                                                                         },
                                                                     "body":
                                                                         {

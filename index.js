@@ -8,8 +8,6 @@ const GithubHelper = require("./GithubHelper");
 
 class PullRequestReviewer {
 
-    static extractedDiffs = [];
-
     constructor(githubToken, openaiApiKey, model) {
         this.octokit = new Octokit({ auth: githubToken });
         this.openaiApiKey = openaiApiKey;
@@ -61,8 +59,21 @@ class PullRequestReviewer {
 
             };
 
+
+
+            const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
+            const fileCommentator = (comment, filePath, line, side) => {
+                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
+            }
+
+            const prStatusUpdater = (event, body) => {
+                githubHelper.createReview(owner, repo, pullRequestId, event, body);
+            }
+
+            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prStatusUpdater);
+
             if(pullRequestData.title) {
-                const task_id = await this.extractJiraTaskId(pullRequestData.title);
+                const task_id = await aiHelper.extractJiraTaskId(pullRequestData.title);
 
                 if(task_id) {
                     let jiraTaskDetails = await this.getJiraTaskDetails(task_id);
@@ -74,20 +85,8 @@ class PullRequestReviewer {
                 }
             }
 
-            const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
-            const fileCommentator = (comment, filePath, line, side) => {
-                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
-            }
-
-            const prStatusUpdater = (event, body) => {
-                githubHelper.createReview(owner, repo, pullRequestId, event, body);
-            }
-
-
-            const aiHelper = new AiHelper(openaiApiKey, prDetails, fileContentGetter, fileCommentator, prStatusUpdater);
+            aiHelper.prDetails = prDetails
             await aiHelper.executeCodeReview(reviewableFiles);
-
-            process.exit(0);
 
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
@@ -129,42 +128,7 @@ class PullRequestReviewer {
 
     }
 
-    async extractJiraTaskId(prTitle) {
-        const response = await this.openai.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
-                { role: "user", content: prTitle },
-            ],
-            response_format: {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "pr_title_task_id",
-                    "strict": true,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {
-                                "type": "string",
-                                "description": "The extracted task ID from the pull request title."
-                            }
-                        },
-                        "required": [
-                            "task_id"
-                        ],
-                        "additionalProperties": false
-                    }
-                }
-            },
-            temperature: 1,
-            top_p: 1,
-            max_tokens: 2000,
-        });
 
-        const completion = response.data;
-        const taskId = JSON.parse(completion.choices[0].message.content).task_id;
-        return taskId;
-    }
 
 
     async run(pullRequestId) {

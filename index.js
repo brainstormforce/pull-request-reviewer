@@ -89,6 +89,9 @@ class PullRequestReviewer {
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
 
+            process.exit(0);
+
+
             for(const comment of prComments) {
                 if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 

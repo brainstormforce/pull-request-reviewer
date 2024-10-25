@@ -284,7 +284,7 @@ class AiHelper {
         content = lines.slice(start, end).join("\n");
 
         core.info('----------- File Content After extraction -----------');
-        core.debug(content);
+        core.info(content);
         core.info("----------------------------");
 
 

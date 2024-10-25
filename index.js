@@ -119,6 +119,9 @@ class PullRequestReviewer {
                         if (review.status === "RESOLVED") {
 
 
+                            try {
+
+
                             // Dismiss review
                             await this.octokit.rest.pulls.deleteReviewComment({
                                 owner,
@@ -126,6 +129,10 @@ class PullRequestReviewer {
                                 comment_id: comment.id
                             });
 
+                            } catch (error) {
+                                core.error(error.message);
+                                process.exit(0)
+                            }
                             core.info("Review dismissed successfully!");
                         }
 

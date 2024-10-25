@@ -22,7 +22,6 @@ class PullRequestReviewer {
         const excludeExtensions = core.getInput('EXCLUDE_EXTENSIONS') || [];
         const includePaths = core.getInput('INCLUDE_PATHS') || [];
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
-
         const githubToken = core.getInput('GITHUB_TOKEN');
 
         const githubHelper = new GithubHelper(githubToken);
@@ -59,6 +58,9 @@ class PullRequestReviewer {
 
             };
 
+
+            core.info("Pull Request Details: " + JSON.stringify(prDetails));
+            process.exit(0);
 
 
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);

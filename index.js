@@ -88,7 +88,41 @@ class PullRequestReviewer {
 
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
-            await githubHelper.dismissPullRequestReview(owner, repo, pullRequestId, prComments, reviewableFiles);
+
+            for(const comment of prComments) {
+                if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
+
+                    core.info("Dismissing review comment on Path: " + comment.path);
+
+                    // check if path exists in extractedDiffs
+                    const path = comment.path;
+
+
+
+                    // Get the Path patch from reviewableFiles
+                    let file = reviewableFiles.find(file => file.filename === path);
+
+
+                    if(file) {
+
+                        // Get the JIRA Task title and description
+                        const review = aiHelper.checkCommentResolved(file.patch, comment.body);
+
+                        if(review.status === "RESOLVED") {
+
+                            // Dismiss review
+                            await this.octokit.rest.pulls.deleteReviewComment({
+                                owner,
+                                repo,
+                                comment_id: comment.id
+                            });
+
+                            core.info("Review dismissed successfully!");
+                        }
+
+                    }
+                }
+            }
 
 
 

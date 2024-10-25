@@ -3,6 +3,52 @@ const { OpenAI } = require('openai');
 const core = require("@actions/core");
 class AiHelper {
 
+    async checkCommentResolved(patch, commentText) {
+
+
+        const userPrompt = `
+                Code snippet:
+                
+                ${patch}
+                
+                Review Comment: 
+                
+                ${commentText}
+                `;
+
+
+        const response = await this.openai.chat.completions.create({
+            model: this.model,
+            messages: [
+                { role: "system", content: 'You are an experienced software reviewer. Please verify the code snippet and determine whether the provided review has been addressed.' },
+                { role: "user", content: userPrompt },
+            ],
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "pull_request_review_verify",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            status: {
+                                type: "string",
+                                description: "RESOLVED if the review comment has been addressed, UNRESOLVED if the review comment has not been addressed.",
+                                enum: ["RESOLVED", "UNRESOLVED"]
+                            }
+                        },
+                        required: ["status"],
+                        additionalProperties: false
+                    }
+                }
+            },
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 2000,
+        });
+
+        return  JSON.parse(response.choices[0].message.content);
+    }
 
     async extractJiraTaskId(prTitle) {
         const response = await this.openai.chat.completions.create({

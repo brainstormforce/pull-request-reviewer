@@ -277,10 +277,6 @@ class AiHelper {
             content = await this.fileContentGetter(pathToFile);
         }
 
-        core.info('----------- File Actual Content Requested -----------');
-        core.info(content);
-        core.info("----------------------------");
-
        // Extract the lines from content from start and end line
         const lines = content.split("\n");
         const start = Math.max(0, startLineNumber - span);
@@ -288,7 +284,7 @@ class AiHelper {
         content = lines.slice(start, end).join("\n");
 
         core.info('----------- File Content After extraction -----------');
-        core.info(content);
+        core.debug(content);
         core.info("----------------------------");
 
 

@@ -86,7 +86,8 @@ class PullRequestReviewer {
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
 
-            process.exit(0);
+
+            core.info("Checking for previous review comments...");
 
 
             for(const comment of prComments) {

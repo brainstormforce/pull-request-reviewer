@@ -152,11 +152,6 @@ class AiHelper {
         }
 
 
-        core.info('----------- Assistant Initialization -----------');
-        core.info(instructions);
-        core.info('---------------------------------------------');
-
-
         this.assistant = await this.openai.beta.assistants.create({
             name: "BSF - AI Code Reviewer",
             instructions: instructions

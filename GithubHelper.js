@@ -54,7 +54,13 @@ class GitHubHelper {
                 path: filePath,
                 ref,
             });
-            return Buffer.from(fileContent.content, "base64").toString("utf-8");
+
+            let extractedCode =  Buffer.from(fileContent.content, "base64").toString("utf-8");
+            core.info("-----------------------")
+            core.info('Extracted code: ' + extractedCode)
+            core.info("-----------------------")
+
+            return extractedCode;
         } catch (error) {
             throw new Error(`Error retrieving file content: ${error.message}`);
         }

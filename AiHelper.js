@@ -60,16 +60,33 @@ class AiHelper {
                                     "type": "string",
                                     "description": "The relative path to the file."
                                 },
+                                "side": {
+                                    "type": "string",
+                                    "description": "In a split diff view, the side of the diff that the pull request's changes appear on. Can be LEFT or RIGHT. Use LEFT for deletions that appear in red. Use RIGHT for additions that appear in green or unchanged lines that appear in white and are shown for context. For a multi-line comment, side represents whether the last line of the comment range is a deletion or addition. "
+                                },
                                 "lineNumber": {
                                     "type": "integer",
-                                    "description": "The line number in the file where the issue was found."
+                                    "description": "The line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to. For a multi-line comment, the last line of the range that your comment applies to."
+                                },
+                                "start_line": {
+                                    "type": "integer",
+                                    "description": "The start of the line range that the comment refers to. The start_line is the first line in the pull request diff that your multi-line comment applies to."
+                                },
+                                "start_side": {
+                                    "type": "string",
+                                    "description": "The side of the diff that the start of the line range that the comment refers to appears on. Can be LEFT or RIGHT."
                                 },
                                 "foundIssueDescription": {
                                     "type": "string",
                                     "description": "Description of the issue found."
+                                },
+                                "subject_type": {
+                                    "type": "string",
+                                    "description": "The level at which the comment is targeted.Can be one of: line, file",
+                                    "enum": ["line", "file"]
                                 }
                             },
-                            "required": ["fileName", "lineNumber", "foundIssueDescription"]
+                            "required": ["fileName", "foundIssueDescription"]
                         }
                     }
                 },

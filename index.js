@@ -29,7 +29,7 @@ class PullRequestReviewer {
 
         const githubHelper = new GithubHelper(githubToken);
 
-        const getreviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
+        const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
                 const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
                 const isExcludedExtension = excludeExtensionsArray.length > 0 && excludeExtensionsArray.some(ext => filename.endsWith(ext));
@@ -51,7 +51,7 @@ class PullRequestReviewer {
                 pull_number: pullRequestId,
             });
 
-            const reviewableFiles = getreviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
+            const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
             const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);

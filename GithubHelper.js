@@ -89,7 +89,7 @@ class GitHubHelper {
                 body,
             });
         } catch (error) {
-            throw new Error(`Error creating review: ${error.message}`);
+            core.error(`Error creating review: ${error.message}`);
         }
     }
 

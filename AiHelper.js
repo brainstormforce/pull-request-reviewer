@@ -36,8 +36,7 @@ class AiHelper {
             max_tokens: 2000,
         });
 
-        const completion = response.data;
-        return JSON.parse(completion.choices[0].message.content).task_id;
+        return JSON.parse(response.choices[0].message.content).task_id;
     }
 
     constructor(apiKey, fileContentGetter, fileCommentator, prStatusUpdater) {

@@ -2,6 +2,7 @@ const { warning, info } = require("@actions/core");
 const { OpenAI } = require('openai');
 const core = require("@actions/core");
 class AiHelper {
+    prDetails;
 
     async checkCommentResolved(patch, commentText) {
 
@@ -149,6 +150,11 @@ class AiHelper {
             \`\`\`
             `;
         }
+
+
+        core.info('----------- Assistant Initialization -----------');
+        core.info(instructions);
+        core.info('---------------------------------------------');
 
 
         this.assistant = await this.openai.beta.assistants.create({

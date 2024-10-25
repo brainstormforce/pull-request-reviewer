@@ -3,18 +3,55 @@ const { OpenAI } = require('openai');
 const core = require("@actions/core");
 class AiHelper {
 
-    constructor(apiKey, fileContentGetter, fileCommentator, prStatusUpdater) {
+    constructor(apiKey, prDetails, fileContentGetter, fileCommentator, prStatusUpdater) {
         this.openai = new OpenAI({ apiKey });
         this.fileContentGetter = fileContentGetter;
         this.fileCommentator = fileCommentator;
         this.prStatusUpdater = prStatusUpdater;
+        this.prDetails = prDetails;
         this.fileCache = {};
     }
 
+    async extractJiraTaskId(prTitle) {
+        const response = await this.openai.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
+                { role: "user", content: prTitle },
+            ],
+            response_format: {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "pr_title_task_id",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "task_id": {
+                                "type": "string",
+                                "description": "The extracted task ID from the pull request title."
+                            }
+                        },
+                        "required": [
+                            "task_id"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 2000,
+        });
+
+        const completion = response.data;
+        const taskId = JSON.parse(completion.choices[0].message.content).task_id;
+        return taskId;
+    }
+
     async initCodeReviewAssistant() {
-        this.assistant = await this.openai.beta.assistants.create({
-            name: "BSF - AI Code Reviewer",
-            instructions: `
+
+        let instructions = `
             You are an expert AI responsible for reviewing GitHub Pull Requests (PRs) with a focus on code quality, functionality, and alignment with provided JIRA tasks.
             You will be given a PR title, description, and possibly JIRA task details for context. Your goal is to analyze the code changes and suggest improvements or raise concerns based on the following guidelines:
             
@@ -37,7 +74,40 @@ class AiHelper {
             Warnings:
             - Be mindful that line numbers in the files start from 1.
             - Focus on actionable feedback without suggesting vague improvements.
-            `
+            
+            More context:
+            
+            PR Title:
+            \`\`\`
+        ${this.prDetails.prTitle}
+             \`\`\`
+             
+             PR Description:
+            \`\`\`
+        ${this.prDetails.prDescription}
+            \`\`\`
+            `;
+
+        if (this.prDetails.jiratTaskTitle || this.prDetails.jiraTaskDescription) {
+            instructions += `
+            JIRA Task ID: 
+            
+            \`\`\`
+            ${this.prDetails.jiratTaskTitle}
+            \`\`\`
+            
+            JIRA Task Description: 
+            
+            \`\`\`
+            ${this.prDetails.jiraTaskDescription}
+            \`\`\`
+            `;
+        }
+
+
+        this.assistant = await this.openai.beta.assistants.create({
+            name: "BSF - AI Code Reviewer",
+            instructions: instructions
 ,           model: "gpt-4o-mini",
             tool_resources: {
                 "code_interpreter": {
@@ -243,7 +313,13 @@ class AiHelper {
             this.thread.id,
             {
                 role: "user",
-                content: `${JSON.stringify(simpleChangedFiles)}`
+                content: `
+                PR diff for review:
+                
+               \`\`\`
+                ${JSON.stringify(simpleChangedFiles)}
+                \`\`\`
+                `
             }
         );
 

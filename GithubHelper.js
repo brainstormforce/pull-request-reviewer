@@ -79,12 +79,7 @@ class GitHubHelper {
     async createReview(owner, repo, pull_number, event, body) {
         try {
 
-            core.info("---------------- Creating Review ----------------");
-            core.info(`Event: ${event}`);
-            core.info(`Body: ${body}`);
-            core.info("---------------------------------------------");
-
-            await this.octokit.rest.pulls.createReview({
+              await this.octokit.rest.pulls.createReview({
                 owner,
                 repo,
                 pull_number,

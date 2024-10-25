@@ -54,6 +54,26 @@ class PullRequestReviewer {
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
             const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
+
+            const prDetails = {
+                prTitle: pullRequestData.title,
+                prDescription: pullRequestData.body,
+
+            };
+
+            if(pullRequestData.title) {
+                const task_id = await aiHelper.extractJiraTaskId(pullRequestData.title);
+
+                if(task_id) {
+                    let jiraTaskDetails = await this.getJiraTaskDetails(task_id);
+
+                    if( jiraTaskDetails ) {
+                        prDetails.jiratTaskTitle = jiraTaskDetails.taskSummary;
+                        prDetails.jiraTaskDescription = jiraTaskDetails.taskDescription;
+                    }
+                }
+            }
+
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
             const fileCommentator = (comment, filePath, line, side) => {
                 githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
@@ -64,254 +84,17 @@ class PullRequestReviewer {
             }
 
 
-            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prStatusUpdater);
+            const aiHelper = new AiHelper(openaiApiKey, prDetails, fileContentGetter, fileCommentator, prStatusUpdater);
             await aiHelper.executeCodeReview(reviewableFiles);
 
             process.exit(0);
-            // Fetch the PR diff
-            const { data: diff } = await this.octokit.rest.pulls.get({
-                owner,
-                repo,
-                pull_number: pullRequestId,
-                mediaType: { format: "diff" },
-            });
-
-            this.constructor.extractedDiffs = this.extractBlocks(diff);
-
-            /**
-             * Adding position to each line in the diff.
-             */
-            this.constructor.extractedDiffs = this.constructor.extractedDiffs.map(file => {
-                const path = Object.keys(file)[0];
-                const lines = file[path].split("\n");
-                let position = 0;
-                return {
-                    [path]: lines.map(line => {
-                        if (line.startsWith("@@")) {
-                            position = -1;
-                        }
-                        position++;
-                        return `${position} ${line}`;
-                    }).join("\n")
-                };
-            });
-
-            const diffText = this.constructor.extractedDiffs.map(obj => Object.values(obj)[0]).join('\n\n');
-
-            const prTitle = prDetails.title || "";
-            const prDescription = prDetails.body || "";
-
-            let jiraTaskDetails = {};
-
-            const url = "https://api.openai.com/v1/chat/completions";
-
-            // Extract the JIRA Task ID from the PR title
-            if(prTitle) {
-
-                // OpenAI API request to extract the JIRA Task ID
-                const response = await axios.post(url, {
-                    model: this.model,
-                    messages: [
-                        { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
-                        { role: "user", content: prTitle},
-                    ],
-                    response_format: {
-                        "type": "json_schema",
-                        "json_schema":
-                            {
-                                "name": "pr_title_task_id",
-                                "strict": true,
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "task_id": {
-                                            "type": "string",
-                                            "description": "The extracted task ID from the pull request title."
-                                        }
-                                    },
-                                    "required": [
-                                        "task_id"
-                                    ],
-                                    "additionalProperties": false
-                                }
-                            }
-                    },
-                    temperature: 1,
-                    top_p: 1,
-                    max_tokens: 200,
-                },{
-                    headers: {
-                        Authorization: `Bearer ${this.openaiApiKey}`,
-                        "Content-Type": "application/json",
-                    },
-                    timeout: 300000, // 300 seconds
-                });
-
-                const completion = response.data;
-
-                const task_id = JSON.parse(completion.choices[0].message.content).task_id;
-
-                if(task_id) {
-                    core.info("Found Task ID: " + task_id);
-                    jiraTaskDetails = await this.getJiraTaskDetails(task_id);
-                }
-
-            }
-
-            // Prepare OpenAI API request
-
-            const systemPrompt = `
-            You are an experienced software reviewer. You will be given an incomplete code fragment where:
-                - Lines starting with '+' represent newly added code (focus only on these).
-                - Lines starting with '-' represent removed code.
-            Task: Refactor, optimize, and validate the newly added lines. If no improvements are needed, respond with "LGTM!" and use the APPROVE event.    
-            Instructions:
-            - Cross-check the complete code against the relevant JIRA task and provide suggestions if necessary.
-            - Provide specific code improvements focused on performance, readability, or best practices, using backticks for any code suggestions.
-            - Strictly DO NOT provide explanations, compliments, or general feedback.
-            `;
-
-            let userPrompt = `
-            Review the following code diff and take the PR title, description & Jira Task, description if any into account when writing the review.
-             **PR Title:** 
-             
-             ${prTitle} 
-             
-             **PR Description:** 
-            
-             ${prDescription} 
-             
-             **Code Snippet:** 
-             
-             \`\`\`diff
-             ${diffText}
-              \`\`\`
-             
-             `;
-
-            // Append to user context if jiraTaskDetails preset.
-            if(jiraTaskDetails.taskSummary) {
-
-                core.info('Using JIRA Task Details in the user prompt...');
-
-                userPrompt += `
-                **JIRA Task Summary:** 
-                
-                ${jiraTaskDetails.taskSummary}
-                
-                **JIRA Task Description:**
-                
-                ${jiraTaskDetails.taskDescription}
-                `;
-            }
-
-
-            // Prepare the array of paths from the extractedDiffs
-            const filePaths = this.constructor.extractedDiffs.map(file => Object.keys(file)[0]);
-
-            const response = await axios.post(url, {
-                model: this.model,
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt },
-                ],
-                'response_format': {
-                    "type": "json_schema",
-                    "json_schema":
-                        {
-                            "name": "pull_request_reviews",
-                            "strict": true,
-                            "schema":
-                                {
-                                    "type": "object",
-                                    "properties":
-                                        {
-                                            "event":
-                                                {
-                                                    "type": "string",
-                                                    "description": "The event type indicating the nature of the change request. APPROVE to approve the pull request, REQUEST_CHANGES to request MUST changes, or COMMENT to comment on the pull request.",
-                                                    "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"]
-                                                },
-                                            "comments":
-                                                {
-                                                    "type": "array",
-                                                    "description": "A list of reviews provided for the pull request. Write LGTM! if no changes are requested.",
-                                                    "items":
-                                                        {
-                                                            "type": "object",
-                                                            "properties":
-                                                                {
-                                                                    "path":
-                                                                        {
-                                                                            "type": "string",
-                                                                            "description": "The relative path to the file that necessitates a comment.",
-                                                                            "enum": filePaths
-                                                                        },
-                                                                    "position":
-                                                                        {
-                                                                            "type": "number",
-                                                                            "description": "Position in the file where you adding a comment. Start of the line indicates the position."
-                                                                        },
-                                                                    "body":
-                                                                        {
-                                                                            "type": "string",
-                                                                            "description": "Single liner review comment. LGTM if no changes are requested."
-                                                                        }
-                                                                },
-                                                            "required": ["path", "position", "body"],
-                                                            "additionalProperties": false
-                                                        }
-                                                }
-                                        },
-                                    "required": ["event", "comments"],
-                                    "additionalProperties": false
-                                }
-                        }
-                },
-                temperature: 1,
-                top_p: 1,
-                max_tokens: 16380,
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.openaiApiKey}`,
-                    "Content-Type": "application/json",
-                },
-                timeout: 300000, // 300 seconds
-            });
-
-            const completion = response.data;
-            const review = JSON.parse(completion.choices[0].message.content);
-
-            core.info("-------------------");
-            core.info("AI Review: " + JSON.stringify(review));
-            core.info("-------------------");
 
             const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
 
             await this.dismissPullRequestReview(pullRequestId, prComments);
 
-            const positions = prComments.map(comment => comment.position);
 
-            // Prepare comments for the review by removing the comments that are already present in the PR and comments that contain LGTM.
-            const reviewComments = review.comments.filter(comment => !positions.includes(comment.position) && !comment.body.includes('LGTM') ).map(comment => ({
-                path: comment.path,
-                position: comment.position,
-                body: comment.body,
-            }));
 
-            core.info('Final Review Comments: ' + JSON.stringify(reviewComments));
-
-            await this.octokit.rest.pulls.createReview({
-                owner,
-                repo,
-                pull_number: pullRequestId,
-                comments: reviewComments || [],
-                event: review.event || "COMMENT", // Default to COMMENT if no event specified
-            });
-
-            core.info("-------------------");
-            core.info(`${reviewComments.length} Reviews added successfully!`);
-            core.info("-------------------");
 
         } catch (error) {
             core.error(error.message);
@@ -449,54 +232,7 @@ class PullRequestReviewer {
         return data;
     }
 
-    extractBlocks(diff) {
-        const fileExtensions = ["php", "js", "jsx"];
-        const excludedFolders = ["vendor", "build", "dist", "node_modules"];
-        const blocks = [];
-        const lines = diff.split("\n");
-        let currentBlock = [];
-        let inBlock = false;
-        let currentFile = "";
 
-        lines.forEach(line => {
-            // Start of a new block.
-            if (line.startsWith("diff --git")) {
-                if (inBlock && currentBlock.length > 0) {
-                    if (this.matchesExtension(currentFile, fileExtensions)) {
-                        blocks.push({ [currentFile]: currentBlock.join("\n") });
-                    }
-                    currentBlock = [];
-                }
-
-                const matches = line.match(/diff --git a\/(.*) b\//);
-                currentFile = matches && matches[1] ? matches[1] : "";
-
-                // Exclude files if the path contains any of the excluded folders
-                if (excludedFolders.some(folder => currentFile.includes(folder))) {
-                    inBlock = false; // Skip the current block
-                } else {
-                    inBlock = true;
-                }
-            }
-
-            // If we're in a block, keep adding lines to it.
-            if (inBlock) {
-                currentBlock.push(line);
-            }
-        });
-
-        // Add the last block if necessary.
-        if (inBlock && this.matchesExtension(currentFile, fileExtensions)) {
-            blocks.push({ [currentFile]: currentBlock.join("\n") });
-        }
-
-        return blocks;
-    }
-
-
-    matchesExtension(file, fileExtensions) {
-        return fileExtensions.some(extension => file.endsWith(extension));
-    }
 
     async run(pullRequestId) {
 

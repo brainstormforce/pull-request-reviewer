@@ -59,10 +59,6 @@ class PullRequestReviewer {
             };
 
 
-            core.info("Pull Request Details: " + JSON.stringify(prDetails));
-            process.exit(0);
-
-
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
             const fileCommentator = (comment, filePath, line, side) => {
                 githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);

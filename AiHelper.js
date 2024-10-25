@@ -5,7 +5,7 @@ class AiHelper {
 
 
     async extractJiraTaskId(prTitle) {
-        const response = await this.openai.completions.create({
+        const response = await this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
                 { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
@@ -37,8 +37,7 @@ class AiHelper {
         });
 
         const completion = response.data;
-        const taskId = JSON.parse(completion.choices[0].message.content).task_id;
-        return taskId;
+        return JSON.parse(completion.choices[0].message.content).task_id;
     }
 
     constructor(apiKey, fileContentGetter, fileCommentator, prStatusUpdater) {

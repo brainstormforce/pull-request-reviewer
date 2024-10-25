@@ -148,7 +148,7 @@ class GitHubHelper {
 
                     // Get the JIRA Task title and description
 
-                    const response = await this.openai.createChatCompletion({
+                    const response = await this.openai.chat.completions.create({
                         model: this.model,
                         messages: [
                             { role: "system", content: 'You are an experienced software reviewer. Please verify the code snippet and determine whether the provided review has been addressed.' },

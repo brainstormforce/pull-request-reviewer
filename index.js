@@ -89,9 +89,9 @@ class PullRequestReviewer {
 
             process.exit(0);
 
-            const prComments = await this.getPullRequestComments(owner, repo, pullRequestId);
+            const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
-            await this.dismissPullRequestReview(pullRequestId, prComments);
+            await githubHelper.dismissPullRequestReview(owner, repo, pullRequestId, prComments, reviewableFiles);
 
 
 
@@ -101,101 +101,7 @@ class PullRequestReviewer {
         }
     }
 
-    async dismissPullRequestReview(pullRequestId, prComments) {
-        const owner = context.repo.owner;
-        const repo = context.repo.repo;
 
-        const url = "https://api.openai.com/v1/chat/completions";
-
-        for(const comment of prComments) {
-            if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
-
-                core.info("Dismissing review comment on Path: " + comment.path);
-
-                // check if path exists in extractedDiffs
-                const path = comment.path;
-                core.info('Path: ' + path);
-                const extractedDiffs = this.constructor.extractedDiffs;
-                const file = extractedDiffs.find(file => file[path]);
-
-
-                // Get the comment
-                const commentText = comment.body;
-
-                const userPrompt = `
-                Code snippet:
-                
-                ${file[path]}
-                
-                Review Comment: 
-                
-                ${commentText}
-                `;
-
-                if(file) {
-
-                    // Get the JIRA Task title and description
-
-
-                    const response = await axios.post(url, {
-                        model: this.model,
-                        messages: [
-                            { role: "system", content: 'You are an experienced software reviewer. Please verify the code snippet and determine whether the provided review has been addressed.' },
-                            { role: "user", content: userPrompt },
-                        ],
-                        'response_format': {
-                            "type": "json_schema",
-                            "json_schema":
-                                {
-                                    "name": "pull_request_review_verify",
-                                    "strict": true,
-                                    "schema":
-                                        {
-                                            "type": "object",
-                                            "properties":
-                                                {
-                                                    "status":
-                                                        {
-                                                            "type": "string",
-                                                            "description": "RESOLVED if the review comment has been addressed, UNRESOLVED if the review comment has not been addressed.",
-                                                            "enum": ["RESOLVED", "UNRESOLVED"]
-                                                        }
-                                                },
-                                            "required": ["status"],
-                                            "additionalProperties": false
-                                        }
-                                }
-                        },
-                        temperature: 1,
-                        top_p: 1,
-                        max_tokens: 2000,
-                    }, {
-                        headers: {
-                            Authorization: `Bearer ${this.openaiApiKey}`,
-                            "Content-Type": "application/json",
-                        },
-                        timeout: 300000, // 300 seconds
-                    });
-
-                    const completion = response.data;
-                    const review = JSON.parse(completion.choices[0].message.content);
-
-                    if(review.status === "RESOLVED") {
-
-                        // Dismiss review
-                        await this.octokit.rest.pulls.deleteReviewComment({
-                            owner,
-                            repo,
-                            comment_id: comment.id
-                        });
-
-                        core.info("Review dismissed successfully!");
-                    }
-
-                }
-            }
-        }
-    }
 
     async getJiraTaskDetails(task_id) {
 
@@ -221,15 +127,6 @@ class PullRequestReviewer {
             taskDescription
         }
 
-    }
-
-    async getPullRequestComments(owner, repo, pullRequestId) {
-        const { data } = await this.octokit.rest.pulls.listReviewComments({
-            owner,
-            repo,
-            pull_number: pullRequestId,
-        });
-        return data;
     }
 
 

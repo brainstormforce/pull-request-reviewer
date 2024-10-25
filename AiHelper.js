@@ -277,7 +277,11 @@ class AiHelper {
             content = await this.fileContentGetter(pathToFile);
         }
 
-        content = `${pathToFile}\n'''\n${content.substring(Math.max(0, startLineNumber - span), endLineNumber + span)}\n'''\n`;
+        core.info('----------- File Actual Content Requested -----------');
+        core.info(content);
+        core.info("----------------------------");
+
+        content = `${pathToFile}\n'''\n${content.substring(startLineNumber - span, endLineNumber + span)}\n'''\n`;
 
         core.info("----------- File Content Requested -----------");
         core.info(`Path: ${pathToFile}`);
@@ -330,7 +334,7 @@ class AiHelper {
         await this.initCodeReviewAssistant();
 
         let retries = 0;
-        const maxRetries = 3;
+        const maxRetries = 5;
         while (retries < maxRetries) {
 
             this.thread = await this.openai.beta.threads.create();

@@ -1,6 +1,6 @@
-const { Octokit } = require("@octokit/rest");
+const {Octokit} = require("@octokit/rest");
 const axios = require("axios");
-const { GitHub, context } = require("@actions/github");
+const {GitHub, context} = require("@actions/github");
 const core = require("@actions/core");
 
 const AiHelper = require("./AiHelper");
@@ -9,13 +9,14 @@ const GithubHelper = require("./GithubHelper");
 class PullRequestReviewer {
 
     constructor(githubToken, openaiApiKey, model) {
-        this.octokit = new Octokit({ auth: githubToken });
+        this.octokit = new Octokit({auth: githubToken});
         this.openaiApiKey = openaiApiKey;
         this.model = model;
         this.baseUrl = "https://api.github.com";
     }
 
     async reviewPullRequest(pullRequestId) {
+
         const owner = context.repo.owner;
         const repo = context.repo.repo;
         const includeExtensions = core.getInput('INCLUDE_EXTENSIONS') || ["php", "js", "jsx"];
@@ -42,16 +43,25 @@ class PullRequestReviewer {
         try {
 
             // List all PR files
-            const { data: changedFiles } = await this.octokit.rest.pulls.listFiles({
+            const {data: changedFiles} = await this.octokit.rest.pulls.listFiles({
                 owner,
                 repo,
                 pull_number: pullRequestId,
             });
 
+            /**
+             * Filter files based on the extensions and paths provided.
+             */
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
+            /**
+             * Get the pull request data
+             */
             const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
 
+            /**
+             * Prepare PR details to be used in AI Helper.
+             */
             const prDetails = {
                 prTitle: pullRequestData.title,
                 prDescription: pullRequestData.body,
@@ -65,15 +75,18 @@ class PullRequestReviewer {
                 githubHelper.createReview(owner, repo, pullRequestId, event, body);
             }
 
+            /**
+             * Initialize AI Helper
+             */
             const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prStatusUpdater);
 
-            if(pullRequestData.title) {
+            if (pullRequestData.title) {
                 const task_id = await aiHelper.extractJiraTaskId(pullRequestData.title);
 
-                if(task_id) {
+                if (task_id) {
                     let jiraTaskDetails = await this.getJiraTaskDetails(task_id);
 
-                    if( jiraTaskDetails ) {
+                    if (jiraTaskDetails) {
                         prDetails.jiratTaskTitle = jiraTaskDetails.taskSummary;
                         prDetails.jiraTaskDescription = jiraTaskDetails.taskDescription;
                     }
@@ -85,8 +98,8 @@ class PullRequestReviewer {
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
             core.info("Checking for previous review comments if any...");
-            for(const comment of prComments) {
-                if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
+            for (const comment of prComments) {
+                if (comment.user.login === "github-actions[bot]" && comment.user.id === 41898282) {
 
                     core.info("Dismissing review comment on Path: " + comment.path);
 
@@ -94,17 +107,15 @@ class PullRequestReviewer {
                     const path = comment.path;
 
 
-
                     // Get the Path patch from reviewableFiles
                     let file = reviewableFiles.find(file => file.filename === path);
 
-
-                    if(file) {
+                    if (file) {
 
                         // Get the JIRA Task title and description
                         const review = aiHelper.checkCommentResolved(file.patch, comment.body);
 
-                        if(review.status === "RESOLVED") {
+                        if (review.status === "RESOLVED") {
 
 
                             // Dismiss review
@@ -127,7 +138,6 @@ class PullRequestReviewer {
             core.error(error.message);
         }
     }
-
 
 
     async getJiraTaskDetails(task_id) {
@@ -157,13 +167,9 @@ class PullRequestReviewer {
     }
 
 
-
-
     async run(pullRequestId) {
 
-
-
-        core.info("Reviewing the pull request...");
+        core.info('---------------------Started Reviewing Pull Request---------------------');
 
         const result = await this.reviewPullRequest(pullRequestId);
         console.log(result);

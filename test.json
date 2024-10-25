@@ -1,0 +1,138 @@
+{
+  "id": "asst_pcLauc0zbkgmj6aUbskhHlwE",
+  "object": "assistant",
+  "created_at": 1729833215,
+  "name": "AI Code Reviewer",
+  "description": null,
+  "model": "gpt-4o-mini",
+  "instructions": "You are an expert AI responsible for reviewing GitHub Pull Requests (PRs) with a focus on code quality, functionality, and alignment with provided JIRA tasks.\n            You will be given a PR title, description, and possibly JIRA task details for context. Your goal is to analyze the code changes and suggest improvements or raise concerns based on the following guidelines:\n            \n            Actions:\n\n            - Request File Content: Use getFileContent when necessary to gather more context for better analysis.\n            - Final PR Judgment: Use markPrStatus to either:\n                 - APPROVE if the PR is clean, or\n                 - REQUEST CHANGES if issues are found.\n            \n            Focus Areas:\n            - Prioritize new code that starts with +.\n  \n            - Validate functionality against the JIRA task and ensure that all requirements are met.\n            - Look for logical errors, security vulnerabilities, and typos.\n            - Avoid repeated comments for the same issue; instead, highlight other critical mistakes.\n            - Ignore code styling issues but ensure code standard consistency.\n            - Always be concise and simply respond with \"LGTM\" if the code looks good with no major issues.\n            \n            Warnings:\n            - Be mindful that line numbers in the files start from 1.\n            - Focus on actionable feedback without suggesting vague improvements",
+  "tools": [
+    {
+      "type": "code_interpreter"
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "getFileContent",
+        "description": "Retrieves the file content to better understand the provided changes",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "pathToFile",
+            "startLineNumber",
+            "endLineNumber"
+          ],
+          "properties": {
+            "pathToFile": {
+              "type": "string",
+              "description": "The fully qualified path to the file."
+            },
+            "endLineNumber": {
+              "type": "integer",
+              "description": "The ending line number of the code segment of interest."
+            },
+            "startLineNumber": {
+              "type": "integer",
+              "description": "The starting line number of the code segment of interest."
+            }
+          }
+        },
+        "strict": false
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "addReviewCommentToFileLine",
+        "description": "Adds an AI-generated review comment to the specified line in a file. DO NOT ask to ensure and verify like review.",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "fileName",
+            "foundIssueDescription"
+          ],
+          "properties": {
+            "side": {
+              "type": "string",
+              "description": "In a split diff view, the side of the diff that the pull request's changes appear on. Can be LEFT or RIGHT. Use LEFT for deletions that appear in red. Use RIGHT for additions that appear in green or unchanged lines that appear in white and are shown for context. For a multi-line comment, side represents whether the last line of the comment range is a deletion or addition. "
+            },
+            "fileName": {
+              "type": "string",
+              "description": "The relative path to the file."
+            },
+            "lineNumber": {
+              "type": "integer",
+              "description": "The line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to. For a multi-line comment, the last line of the range that your comment applies to."
+            },
+            "start_line": {
+              "type": "integer",
+              "description": "The start of the line range that the comment refers to. The start_line is the first line in the pull request diff that your multi-line comment applies to."
+            },
+            "start_side": {
+              "type": "string",
+              "description": "The side of the diff that the start of the line range that the comment refers to appears on. Can be LEFT or RIGHT."
+            },
+            "subject_type": {
+              "enum": [
+                "line",
+                "file"
+              ],
+              "type": "string",
+              "description": "The level at which the comment is targeted.Can be one of: line, file"
+            },
+            "foundIssueDescription": {
+              "type": "string",
+              "description": "Description of the issue found."
+            }
+          }
+        },
+        "strict": false
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "markPrStatus",
+        "description": "Consider all above provided review comments. If no actionalble review provided then mark event_type as APPROVE",
+        "parameters": {
+          "type": "object",
+          "required": [
+            "event_type",
+            "comment"
+          ],
+          "properties": {
+            "event_type": {
+              "type": "string",
+              "description": "The event type indicating the nature of the change request.",
+              "enum": [
+                "APPROVE",
+                "REQUEST_CHANGES",
+                "COMMENT"
+              ]
+            },
+            "comment": {
+              "type": "string",
+              "description": "Provide final summary review about PR in 50-100 words"
+            }
+          },
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+  ],
+  "top_p": 1,
+  "temperature": 1,
+  "tool_resources": {
+    "code_interpreter": {
+      "file_ids": []
+    }
+  },
+  "metadata": {},
+  "updated_at": 1729833414,
+  "response_format": {
+    "type": "text"
+  }
+}
+
+

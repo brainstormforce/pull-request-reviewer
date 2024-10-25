@@ -79,6 +79,20 @@ class GitHubHelper {
         }
     }
 
+    async createReview(owner, repo, pull_number, event, body) {
+        try {
+            await this.octokit.rest.pulls.createReview({
+                owner,
+                repo,
+                pull_number,
+                event,
+                body,
+            });
+        } catch (error) {
+            throw new Error(`Error creating review: ${error.message}`);
+        }
+    }
+
     async createReviewComment(owner, repo, pull_number, commit_id, body, path, line) {
         try {
             await this.octokit.rest.pulls.createReviewComment({

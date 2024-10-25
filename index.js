@@ -59,7 +59,12 @@ class PullRequestReviewer {
                 githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line);
             }
 
-            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
+            const prStatusUpdater = (event, body) => {
+                githubHelper.createReview(owner, repo, pullRequestId, event, body);
+            }
+
+
+            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prStatusUpdater);
             await aiHelper.executeCodeReview(reviewableFiles);
 
             process.exit(0);

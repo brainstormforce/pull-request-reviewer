@@ -18,7 +18,7 @@ class GitHubHelper {
             });
             return diff;
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 
@@ -31,7 +31,7 @@ class GitHubHelper {
             });
             return prData;
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 
@@ -44,7 +44,7 @@ class GitHubHelper {
             });
             return changedFiles;
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 
@@ -61,7 +61,7 @@ class GitHubHelper {
 
             return extractedCode;
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 
@@ -74,7 +74,7 @@ class GitHubHelper {
                 body,
             });
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 
@@ -113,7 +113,7 @@ class GitHubHelper {
                 side
             });
         } catch (error) {
-            core.error(error.message)
+            core.error(error.message);
         }
     }
 

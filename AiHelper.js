@@ -160,6 +160,8 @@ class AiHelper {
             content = await this.fileContentGetter(pathToFile);
         }
 
+        content = `${pathToFile}\n'''\n${content.substring(Math.max(0, startLineNumber - span), endLineNumber + span)}\n'''\n`;
+
         core.info("----------- File Content Requested -----------");
         core.info(`Path: ${pathToFile}`);
         core.info(`Start Line: ${startLineNumber}`);
@@ -167,9 +169,19 @@ class AiHelper {
         core.info(content)
         core.info("----------------------------");
 
-        return `${pathToFile}\n'''\n${content.substring(Math.max(0, startLineNumber - span), endLineNumber + span)}\n'''\n`;
+        return content;
     }
 
+    async updateReviewPrStatus(args) {
+        const { event, body } = args;
+        try {
+            await this.prStatusUpdater(event, body);
+            return "The PR status has been updated.";
+        }
+        catch (error) {
+            return `There is an error in the 'updateReviewPrStatus' usage! Error message:\n${JSON.stringify(error)}`
+        }
+    }
 
     async addReviewCommentToFileLine(args) {
         const { fileName, lineNumber, foundIssueDescription, side } = args;
@@ -263,7 +275,7 @@ class AiHelper {
                         result = await this.addReviewCommentToFileLine(args);
                     }
                     else if (toolCall.function.name == 'updatePrStatus') {
-                        result = await this.prStatusUpdater(args);
+                        result = await this.updateReviewPrStatus(args);
                     }
                     else {
                         result = `Unknown tool requested: ${toolCall.function.name}`;

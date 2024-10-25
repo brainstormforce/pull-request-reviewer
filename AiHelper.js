@@ -12,42 +12,7 @@ class AiHelper {
         this.fileCache = {};
     }
 
-    async extractJiraTaskId(prTitle) {
-        const response = await this.openai.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
-                { role: "user", content: prTitle },
-            ],
-            response_format: {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "pr_title_task_id",
-                    "strict": true,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "task_id": {
-                                "type": "string",
-                                "description": "The extracted task ID from the pull request title."
-                            }
-                        },
-                        "required": [
-                            "task_id"
-                        ],
-                        "additionalProperties": false
-                    }
-                }
-            },
-            temperature: 1,
-            top_p: 1,
-            max_tokens: 2000,
-        });
 
-        const completion = response.data;
-        const taskId = JSON.parse(completion.choices[0].message.content).task_id;
-        return taskId;
-    }
 
     async initCodeReviewAssistant() {
 

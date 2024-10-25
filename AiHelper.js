@@ -173,6 +173,12 @@ class AiHelper {
     }
 
     async updateReviewPrStatus(args) {
+
+        core.info('----------- PR Status Update Requested -----------');
+        core.info(`Event: ${args.event}`);
+        core.info(`Body: ${args.body}`);
+        core.info('---------------------------------------------');
+
         const { event, body } = args;
         try {
             await this.prStatusUpdater(event, body);

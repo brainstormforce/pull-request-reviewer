@@ -81,15 +81,10 @@ class PullRequestReviewer {
             }
 
             aiHelper.prDetails = prDetails
-            await aiHelper.executeCodeReview(reviewableFiles);
 
             const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
 
-
-
-            core.info("Checking for previous review comments...");
-
-
+            core.info("Checking for previous review comments if any...");
             for(const comment of prComments) {
                 if( comment.user.login === "github-actions[bot]" && comment.user.id === 41898282 ) {
 
@@ -111,6 +106,7 @@ class PullRequestReviewer {
 
                         if(review.status === "RESOLVED") {
 
+
                             // Dismiss review
                             await this.octokit.rest.pulls.deleteReviewComment({
                                 owner,
@@ -125,8 +121,7 @@ class PullRequestReviewer {
                 }
             }
 
-
-
+            await aiHelper.executeCodeReview(reviewableFiles);
 
         } catch (error) {
             core.error(error.message);

@@ -56,9 +56,6 @@ class GitHubHelper {
             });
 
             let extractedCode =  Buffer.from(fileContent.content, "base64").toString("utf-8");
-            core.info("-----------------------")
-            core.info('Extracted code: ' + extractedCode)
-            core.info("-----------------------")
 
             return extractedCode;
         } catch (error) {
@@ -81,6 +78,12 @@ class GitHubHelper {
 
     async createReview(owner, repo, pull_number, event, body) {
         try {
+
+            core.info("---------------- Creating Review ----------------");
+            core.info(`Event: ${event}`);
+            core.info(`Body: ${body}`);
+            core.info("---------------------------------------------");
+
             await this.octokit.rest.pulls.createReview({
                 owner,
                 repo,
@@ -93,8 +96,15 @@ class GitHubHelper {
         }
     }
 
-    async createReviewComment(owner, repo, pull_number, commit_id, body, path, line) {
+    async createReviewComment(owner, repo, pull_number, commit_id, body, path, line, side) {
         try {
+
+            core.info("---------------- Creating Review Comment ----------------");
+            core.info(`Body: ${body}`);
+            core.info(`Path: ${path}`);
+            core.info(`Line: ${line}`);
+            core.info("---------------------------------------------");
+
             await this.octokit.rest.pulls.createReviewComment({
                 owner,
                 repo,
@@ -103,6 +113,7 @@ class GitHubHelper {
                 commit_id,
                 path,
                 line,
+                side
             });
         } catch (error) {
             throw new Error(`Error creating review comment: ${error.message}`);

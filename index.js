@@ -55,8 +55,8 @@ class PullRequestReviewer {
 
             const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
             const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
-            const fileCommentator = (comment, filePath, line) => {
-                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line);
+            const fileCommentator = (comment, filePath, line, side) => {
+                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
             }
 
             const prStatusUpdater = (event, body) => {

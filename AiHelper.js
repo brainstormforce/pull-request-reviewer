@@ -86,6 +86,8 @@ class AiHelper {
                         "parameters": {
                             "type": "object",
                             "required": [
+                                "side",
+                                "lineNumber",
                                 "fileName",
                                 "foundIssueDescription"
                             ],
@@ -101,22 +103,6 @@ class AiHelper {
                                 "lineNumber": {
                                     "type": "integer",
                                     "description": "The line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to. For a multi-line comment, the last line of the range that your comment applies to."
-                                },
-                                "start_line": {
-                                    "type": "integer",
-                                    "description": "The start of the line range that the comment refers to. The start_line is the first line in the pull request diff that your multi-line comment applies to."
-                                },
-                                "start_side": {
-                                    "type": "string",
-                                    "description": "The side of the diff that the start of the line range that the comment refers to appears on. Can be LEFT or RIGHT."
-                                },
-                                "subject_type": {
-                                    "enum": [
-                                        "line",
-                                        "file"
-                                    ],
-                                    "type": "string",
-                                    "description": "The level at which the comment is targeted.Can be one of: line, file"
                                 },
                                 "foundIssueDescription": {
                                     "type": "string",
@@ -174,14 +160,21 @@ class AiHelper {
             content = await this.fileContentGetter(pathToFile);
         }
 
+        core.info("----------- File Content Requested -----------");
+        core.info(`Path: ${pathToFile}`);
+        core.info(`Start Line: ${startLineNumber}`);
+        core.info(`End Line: ${endLineNumber}`);
+        core.info(content)
+        core.info("----------------------------");
+
         return `${pathToFile}\n'''\n${content.substring(Math.max(0, startLineNumber - span), endLineNumber + span)}\n'''\n`;
     }
 
 
     async addReviewCommentToFileLine(args) {
-        const { fileName, lineNumber, foundIssueDescription } = args;
+        const { fileName, lineNumber, foundIssueDescription, side } = args;
         try {
-            await this.fileCommentator(foundIssueDescription, fileName, lineNumber);
+            await this.fileCommentator(foundIssueDescription, fileName, lineNumber, side);
             return "The note has been published.";
         }
         catch (error) {
@@ -198,10 +191,6 @@ class AiHelper {
             changes: file.changes,
             patch: file.patch
         }));
-
-        core.info('---------------------------------');
-        core.info(`SimpleChangedFiles files: ${JSON.stringify(simpleChangedFiles)}`);
-        core.info('---------------------------------');
 
         await this.initCodeReviewAssistant();
 
@@ -274,7 +263,7 @@ class AiHelper {
                         result = await this.addReviewCommentToFileLine(args);
                     }
                     else if (toolCall.function.name == 'updatePrStatus') {
-                        await tthis.prStatusUpdater(args);
+                        result = await this.prStatusUpdater(args);
                     }
                     else {
                         result = `Unknown tool requested: ${toolCall.function.name}`;

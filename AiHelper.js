@@ -281,14 +281,16 @@ class AiHelper {
         core.info(content);
         core.info("----------------------------");
 
-        content = `${pathToFile}\n'''\n${content.substring(startLineNumber - span, endLineNumber + span)}\n'''\n`;
+       // Extract the lines from content from start and end line
+        const lines = content.split("\n");
+        const start = Math.max(0, startLineNumber - span);
+        const end = Math.min(lines.length, endLineNumber + span);
+        content = lines.slice(start, end).join("\n");
 
-        core.info("----------- File Content Requested -----------");
-        core.info(`Path: ${pathToFile}`);
-        core.info(`Start Line: ${startLineNumber}`);
-        core.info(`End Line: ${endLineNumber}`);
-        core.info(content)
+        core.info('----------- File Content After extraction -----------');
+        core.info(content);
         core.info("----------------------------");
+
 
         return content;
     }

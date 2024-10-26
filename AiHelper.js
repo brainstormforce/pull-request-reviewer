@@ -361,6 +361,7 @@ class AiHelper {
                 }
             }
 
+
             const response = await this.reviewFile(file);
             if (response.choices[0].message.content) {
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
@@ -449,6 +450,9 @@ class AiHelper {
                                 "items": {
                                     "type": "object",
                                     "properties": {
+                                        "commit_id": {
+
+                                        },
                                         "line": {
                                             "type": "integer",
                                             "description": "The line number in the code snippet where the comment applies."

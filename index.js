@@ -73,6 +73,10 @@ class PullRequestReviewer {
 
             const prComments = await githubHelper.getPullRequestComments( pullRequestId);
 
+
+            core.info("Reviewable Files: " + JSON.stringify(reviewableFiles));
+            process.exit(0)
+
             await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
 
         } catch (error) {

@@ -53,13 +53,14 @@ class PullRequestReviewer {
              */
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
+            core.info("#3 ------ ")
             /**
              * Get the pull request data
              */
             const pullRequestData = await githubHelper.getPullRequest(pullRequestId);
 
 
-            core.info("#3 ------ ")
+
 
             /**
              * Prepare PR details to be used in AI Helper.

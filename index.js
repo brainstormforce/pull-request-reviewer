@@ -53,14 +53,10 @@ class PullRequestReviewer {
              */
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
-            core.info("#3 ------ ")
             /**
              * Get the pull request data
              */
             const pullRequestData = await githubHelper.getPullRequest(pullRequestId);
-
-
-
 
             /**
              * Prepare PR details to be used in AI Helper.
@@ -70,14 +66,14 @@ class PullRequestReviewer {
                 prDescription: pullRequestData.body,
             };
 
-
             /**
              * Initialize AI Helper
              */
             const aiHelper = new AiHelper(openaiApiKey, githubHelper, prDetails);
 
-
             const prComments = await githubHelper.getPullRequestComments( pullRequestId);
+
+            core.info('PR Comments: ' + JSON.stringify(prComments));
 
 
             await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);

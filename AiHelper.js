@@ -465,7 +465,7 @@ class AiHelper {
                                         },
                                         "line": {
                                             "type": "integer",
-                                            "description": "Line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to."
+                                            "description": "Line number calculated as from snippet start line + line number in snippet."
                                         },
                                         "path": {
                                             "type": "string",

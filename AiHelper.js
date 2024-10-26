@@ -103,6 +103,7 @@ class AiHelper {
         this.openai = new OpenAI({ apiKey });
         this.githubHelper = githubHelper;
         this.prDetails = prDetails;
+
         this.fileCache = {};
     }
 

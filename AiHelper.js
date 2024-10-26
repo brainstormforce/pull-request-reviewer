@@ -375,10 +375,9 @@ class AiHelper {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
                 const {what, why, how, impact} = review_comment;
-                await githubHelper.createReviewComment(commit_id, side, line, path, `What: ${what}\n\nWhy: ${why}\n\nHow: ${how}\n\nImpact: ${impact}\n`);
+                await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }
-
 
     }
 

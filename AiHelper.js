@@ -86,11 +86,10 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).task_id;
     }
 
-    constructor(apiKey, fileContentGetter, fileCommentator, prStatusUpdater) {
+    constructor(apiKey, fileContentGetter, fileCommentator) {
         this.openai = new OpenAI({ apiKey });
         this.fileContentGetter = fileContentGetter;
         this.fileCommentator = fileCommentator;
-        this.prStatusUpdater = prStatusUpdater;
         this.fileCache = {};
     }
 
@@ -329,32 +328,139 @@ class AiHelper {
             patch: file.patch
         }));
 
-        await this.initCodeReviewAssistant();
 
-        let retries = 0;
-        const maxRetries = 5;
-        while (retries < maxRetries) {
+        const systemPrompt =
+            `
+            Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
+            First, understand the Diff format to improve your review process. Focus on identifying which code has been removed and what has been newly added, and use this context exclusively for your review.     -----
+            \`\`\`diff
+            diff --git a/loader.php b/loader.php
+            index ff652b5..f271a52 100644
+            --- a/loader.php
+            +++ b/loader.php
+            @@ -14,7 +14,7 @@ jobs:
+            -        a = a + 1
+            +        a++
+                       c = a + b
+            
+            \`\`\`
+            Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.
+            -----
+            
+            ## Focus area
+            - Analyze the code diff to understand what changes have been made.
+            - Focus on areas such as code style consistency, efficiency, readability, and correctness.
+            - Identify any potential bugs or logic errors.
+            - Suggest improvements for variable naming, code structure, and documentation.
+            - Ensure adherence to best practices and relevant coding standards.
+            
+            ## Steps
+            
+            1. **Examine the Diff:** Start by reviewing the code changes in the pull request diff.
+            2. **Code Quality:** Check for readability, consistent styling, and clear syntax.
+            3. **Efficiency:** Look for any inefficient algorithms or patterns and recommend optimizations.
+            4. **Logic & Bugs:** Identify logical errors or bugs and suggest corrections.
+            5. **Best Practices:** Ensure the code follows best practices and relevant coding standards.
+            6. **Naming & Structure:** Evaluate variable names and the overall structure for clarity and simplicity.
+            7. **Documentation:** Check for adequate comments and documentation explaining code functionality.
+            `;
 
-            this.thread = await this.openai.beta.threads.create();
-            try {
-                await this.executeCodeReviewImpl(simpleChangedFiles);
-                break;
+        const prComments = [];
+        // Loop to each file to send completion openai request
+        for (const file of simpleChangedFiles) {
 
-            } catch (error) {
-                const response = await this.openai.beta.threads.del(this.thread.id);
-                warning(response);
+            const response = await this.openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: `${JSON.stringify(file)}` },
+                ],
+                response_format: {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "code_review_comments",
+                        "strict": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "comments": {
+                                    "type": "array",
+                                    "description": "A collection of review comments for specific code snippets.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "line": {
+                                                "type": "integer",
+                                                "description": "The line number in the code snippet where the comment applies."
+                                            },
+                                            "path": {
+                                                "type": "string",
+                                                "description": "The path of the file containing the code snippet."
+                                            },
+                                            "review_comment": {
+                                                "type": "object",
+                                                "description": "The review comment detailing the object, why it is commented, and how it can be improved.",
+                                                "properties": {
+                                                    "what": {
+                                                        "type": "string",
+                                                        "description": "Describes the specific issue or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
+                                                    },
+                                                    "why": {
+                                                        "type": "string",
+                                                        "description": "Why the change is recommended. It clarifies the potential issue or downside of the current implementation, giving the developer insight into the risks, limitations, or best practices they may have overlooked."
+                                                    },
+                                                    "how": {
+                                                        "type": "string",
+                                                        "description": "provides guidance or a specific example on how to address the issue. Generally contains the refactored code snippet with may include a brief explanation, or reference to a best practice that can help the developer implement the suggested change effectively."
+                                                    },
+                                                    "impact": {
+                                                        "type": "string",
+                                                        "description": "Explains the positive outcomes or benefits of making the suggested change, such as improved security, performance, readability, or maintainability. It can also highlight potential negative impacts if the change isn’t made."
+                                                    }
+                                                },
+                                                "required": [
+                                                    "what",
+                                                    "why",
+                                                    "how",
+                                                    "impact"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        },
+                                        "required": [
+                                            "line",
+                                            "path",
+                                            "review_comment"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                }
+                            },
+                            "required": [
+                                "comments"
+                            ],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                temperature: 1,
+                top_p: 1,
+                max_tokens: 8000,
+            });
 
-                retries++;
-                if (retries >= maxRetries) {
-                    warning("Max retries reached. Unable to complete code review.");
-                    throw error;
-                }
+            // Get the comments and store in global variable to process furether
+            prComments.push(JSON.parse(response.choices[0].message.content).comments);
 
-                warning(`Error encountered: ${error.message}; retrying...`);
-                const delay = Math.pow(2, retries) * 1000;
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
         }
+
+        core.info("----------- PR Comments -----------");
+        core.info(JSON.stringify(prComments));
+        core.info("----------------------------");
+
+        process.exit(0)
+
+
+
     }
 
     async executeCodeReviewImpl(simpleChangedFiles) {

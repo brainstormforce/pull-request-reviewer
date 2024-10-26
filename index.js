@@ -71,78 +71,11 @@ class PullRequestReviewer {
             const fileCommentator = (comment, filePath, line, side) => {
                 githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
             }
-            const prStatusUpdater = (event, body) => {
-                githubHelper.createReview(owner, repo, pullRequestId, event, body);
-            }
 
             /**
              * Initialize AI Helper
              */
-            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prStatusUpdater);
-
-            if (pullRequestData.title) {
-                const task_id = await aiHelper.extractJiraTaskId(pullRequestData.title);
-
-                if (task_id) {
-                    let jiraTaskDetails = await this.getJiraTaskDetails(task_id);
-
-                    if (jiraTaskDetails) {
-                        prDetails.jiratTaskTitle = jiraTaskDetails.taskSummary;
-                        prDetails.jiraTaskDescription = jiraTaskDetails.taskDescription;
-                    }
-                }
-            }
-
-            aiHelper.prDetails = prDetails
-
-            const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
-
-            // core.info("Checking for previous review comments if any...");
-            // try {
-            // for (const comment of prComments) {
-            //     if (comment.user.login === "github-actions[bot]" && comment.user.id === 41898282) {
-            //
-            //         core.info("Dismissing review comment on Path: " + comment.path);
-            //
-            //         // check if path exists in extractedDiffs
-            //         const path = comment.path;
-            //
-            //
-            //         // Get the Path patch from reviewableFiles
-            //         let file = reviewableFiles.find(file => file.filename === path);
-            //
-            //         if (file) {
-            //
-            //             // Get the JIRA Task title and description
-            //             const review = aiHelper.checkCommentResolved(file.patch, comment.body);
-            //
-            //             if (review.status === "RESOLVED") {
-            //
-            //
-            //                 try {
-            //
-            //
-            //                 // Dismiss review
-            //                 await this.octokit.rest.pulls.deleteReviewComment({
-            //                     owner,
-            //                     repo,
-            //                     comment_id: comment.id
-            //                 });
-            //
-            //                 } catch (error) {
-            //                     core.error(error.message);
-            //                     process.exit(0)
-            //                 }
-            //                 core.info("Review dismissed successfully!");
-            //             }
-            //
-            //         }
-            //     }
-            // }
-            // } catch (error) {
-            //     core.error(error.message);
-            //     process.exit(0)
-            // }
+            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
 
             await aiHelper.executeCodeReview(reviewableFiles);
 

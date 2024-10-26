@@ -353,6 +353,9 @@ class AiHelper {
             // Get the comments in this file
             const comments = existingPrComments.filter(comment => comment.path === file.filename);
 
+            // Extarct all the comments body
+            const commentsBody = comments.map(comment => comment.body);
+
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
                 const resolved = await this.checkCommentResolved(file.patch, comment.body);
@@ -363,12 +366,19 @@ class AiHelper {
             }
 
 
-            const response = await this.reviewFile(file);
+            const response = await this.reviewFile(file, commentsBody);
             if (response.choices[0].message.content) {
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
             }
 
         }
+
+
+        core.info('----------- PR Comments -----------');
+        core.info(JSON.stringify(prComments, null, 2));
+        core.info('---------------------------------------------');
+
+        process.exit(0);
 
         // Loop on the prComments to add the comments to the PR
         for (const comments of prComments) {
@@ -379,11 +389,13 @@ class AiHelper {
             }
         }
 
+
+
     }
 
-    async reviewFile(file) {
+    async reviewFile(file, commentsBody) {
 
-        const systemPrompt = `
+        let systemPrompt = `
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
             So analyse what is removed and what is added and provide the review comments.
                         
@@ -431,8 +443,24 @@ class AiHelper {
             PR description:
             \`\`\`
             ${this.prDetails.prDescription}
+            \`\`\`    
+            
+             Here are previous comments on this file, do not reperat those comments:
+            \`\`\`
+            ${commentsBody.join('\n')}
+            \`\`\`  
+            `;
+
+        // Check if commentsBody
+        if (commentsBody.length > 0) {
+            systemPrompt += `
+            
+            Here are previous comments on this file, do not suggest those comments:
+            \`\`\`
+            ${commentsBody.join('\n')}
             \`\`\`
             `;
+        }
 
         return this.openai.chat.completions.create({
             model: 'gpt-4o-mini',

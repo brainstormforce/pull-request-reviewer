@@ -25,7 +25,7 @@ class PullRequestReviewer {
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
         const githubToken = core.getInput('GITHUB_TOKEN');
 
-        const githubHelper = new GithubHelper(githubToken);
+        const githubHelper = new GithubHelper(owner, repo, githubToken);
 
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
@@ -43,11 +43,7 @@ class PullRequestReviewer {
         try {
 
             // List all PR files
-            const {data: changedFiles} = await this.octokit.rest.pulls.listFiles({
-                owner,
-                repo,
-                pull_number: pullRequestId,
-            });
+            const {data: changedFiles} = await githubHelper.listFiles(pullRequestId);
 
             /**
              * Filter files based on the extensions and paths provided.
@@ -57,7 +53,7 @@ class PullRequestReviewer {
             /**
              * Get the pull request data
              */
-            const pullRequestData = await githubHelper.getPullRequest(owner, repo, pullRequestId);
+            const pullRequestData = await githubHelper.getPullRequest(pullRequestId);
 
             /**
              * Prepare PR details to be used in AI Helper.
@@ -67,26 +63,17 @@ class PullRequestReviewer {
                 prDescription: pullRequestData.body,
             };
 
-            const fileContentGetter = async (filePath) => await githubHelper.getContent(owner, repo, filePath, pullRequestData.head.sha);
-            const fileCommentator = (comment, filePath, line, side) => {
-                githubHelper.createReviewComment(owner, repo, pullRequestId, pullRequestData.head.sha, comment, filePath, line, side);
-            }
 
             /**
              * Initialize AI Helper
              */
-            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prDetails);
+            const aiHelper = new AiHelper(openaiApiKey, githubHelper, prDetails);
 
 
-            const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
-
-            core.info('PR Comments: ' + JSON.stringify(prComments, null, 2));
-
-            process.exit(0);
+            const prComments = await githubHelper.getPullRequestComments( pullRequestId);
 
 
-
-            await aiHelper.executeCodeReview(reviewableFiles);
+            await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
 
         } catch (error) {
             core.error(error.message);

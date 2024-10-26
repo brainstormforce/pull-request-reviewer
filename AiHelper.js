@@ -21,25 +21,38 @@ class AiHelper {
         const response = await this.openai.chat.completions.create({
             model: this.model,
             messages: [
-                { role: "system", content: 'You are an experienced software reviewer. Please verify the code snippet and determine whether the provided review has been addressed.' },
+                { role: "system", content: `
+                    Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
+                    
+                    Ensure that you carefully analyze the provided PR diff and the associated comment, considering whether any changes made address the concerns or requirements specified in the comment. Pay attention to code modifications, added features, or explanations that align the PR with the comment's intentions.
+                    
+                    # Steps
+                    
+                    1. **Understand the Comment**: Read the comment to understand the concern or suggestion it provides. Identify the specific parts of the code or logic it pertains to.
+                    2. **Analyze the PR Diff**: Examine the PR diff to identify changes that have been implemented. Look for specific lines, functions, or logic that relate to the comment.
+                    3. **Compare with Comment**: Determine if the changes in the PR diff adequately address the comment. Consider if the solution aligns with the comment’s objectives.
+                    4. **Reasoning**: Provide a brief explanation of why the comment is considered resolved or unresolved, detailing how the changes align or fail to align with the comment's specifications.
+                    5. **Conclusion**: Clearly state whether the comment is resolved or not.
+                ` },
                 { role: "user", content: userPrompt },
             ],
             response_format: {
-                type: "json_schema",
-                json_schema: {
-                    name: "pull_request_review_verify",
-                    strict: true,
-                    schema: {
-                        type: "object",
-                        properties: {
-                            status: {
-                                type: "string",
-                                description: "RESOLVED if the review comment has been addressed, UNRESOLVED if the review comment has not been addressed.",
-                                enum: ["RESOLVED", "UNRESOLVED"]
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "comment_resolutions",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "description": "<Resolved|Unresolved> - [ If resolved use praising words else use constructive feedback ] . Ex. Resolved - Thank you."
                             }
                         },
-                        required: ["status"],
-                        additionalProperties: false
+                        "required": [
+                            "status"
+                        ],
+                        "additionalProperties": false
                     }
                 }
             },
@@ -86,10 +99,9 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).task_id;
     }
 
-    constructor(apiKey, fileContentGetter, fileCommentator, prDetails) {
+    constructor(apiKey, githubHelper, prDetails) {
         this.openai = new OpenAI({ apiKey });
-        this.fileContentGetter = fileContentGetter;
-        this.fileCommentator = fileCommentator;
+        this.githubHelper = fileContentGetter;
         this.prDetails = prDetails;
         this.fileCache = {};
     }
@@ -319,7 +331,7 @@ class AiHelper {
         }
     }
 
-    async executeCodeReview(changedFiles) {
+    async executeCodeReview(changedFiles, existingPrComments, githubHelper) {
         const simpleChangedFiles = changedFiles.map(file => ({
             filename: file.filename,
             status: file.status,
@@ -339,6 +351,15 @@ class AiHelper {
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
             core.info('processing file: ' + file.filename);
+
+            // Get the comments in this file
+            const comments = existingPrComments.filter(comment => comment.path === file.filename);
+
+            // Loop to each comment to check if it is resolved
+            for (const comment of comments) {
+                const resolved = await this.checkCommentResolved(file.patch, comment.body);
+                await githubHelper.updateReviewComment(comment.id, resolved.status);
+            }
 
             const response = await this.reviewFile(file);
             if (response.choices[0].message.content) {

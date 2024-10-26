@@ -4,29 +4,19 @@ const {context} = require("@actions/github");
 const axios = require("axios");
 
 class GitHubHelper {
-    constructor(token) {
+    
+    constructor(owner, repo, token) {
         this.octokit = github.getOctokit(token);
+        this.owner = owner;
+        this.repo = repo;
+        
     }
 
-    async compareCommits(owner, repo, baseBranchName, headBranchName) {
-        try {
-            const { data: diff } = await this.octokit.rest.repos.compareCommits({
-                owner,
-                repo,
-                base: baseBranchName,
-                head: headBranchName,
-            });
-            return diff;
-        } catch (error) {
-            core.error(error.message);
-        }
-    }
-
-    async getPullRequest(owner, repo, prNumber) {
+    async getPullRequest(prNumber) {
         try {
             const { data: prData } = await this.octokit.rest.pulls.get({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 pull_number: prNumber,
             });
             return prData;
@@ -35,11 +25,11 @@ class GitHubHelper {
         }
     }
 
-    async listFiles(owner, repo, prNumber) {
+    async listFiles(prNumber) {
         try {
             const { data: changedFiles } = await this.octokit.rest.pulls.listFiles({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 pull_number: prNumber,
             });
             return changedFiles;
@@ -48,11 +38,11 @@ class GitHubHelper {
         }
     }
 
-    async getContent(owner, repo, filePath, ref) {
+    async getContent( filePath, ref) {
         try {
             const { data: fileContent } = await this.octokit.rest.repos.getContent({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 path: filePath,
                 ref,
             });
@@ -65,11 +55,11 @@ class GitHubHelper {
         }
     }
 
-    async createPRComment(owner, repo, prNumber, body) {
+    async createPRComment(prNumber, body) {
         try {
             await this.octokit.rest.issues.createComment({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 issue_number: prNumber,
                 body,
             });
@@ -78,12 +68,12 @@ class GitHubHelper {
         }
     }
 
-    async createReview(owner, repo, pull_number, event, body) {
+    async createReview( pull_number, event, body) {
         try {
 
               await this.octokit.rest.pulls.createReview({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 pull_number,
                 event,
                 body,
@@ -93,7 +83,7 @@ class GitHubHelper {
         }
     }
 
-    async createReviewComment(owner, repo, pull_number, commit_id, body, path, line, side) {
+    async createReviewComment( pull_number, commit_id, body, path, line, side) {
         try {
 
             core.info("---------------- Creating Review Comment ----------------");
@@ -103,8 +93,8 @@ class GitHubHelper {
             core.info("---------------------------------------------");
 
             await this.octokit.rest.pulls.createReviewComment({
-                owner,
-                repo,
+               owner: this.owner,
+               repo: repo,
                 pull_number,
                 body,
                 commit_id,
@@ -117,12 +107,25 @@ class GitHubHelper {
         }
     }
 
+    async updateReviewComment( comment_id, body) {
+        try {
+            await this.octokit.rest.pulls.updateReviewComment({
+               owner: this.owner,
+               repo: repo,
+                comment_id,
+                body,
+            });
+            
+        } catch (error) {
+            core.error(error.message);
+        }
+    }
 
 
-    async getPullRequestComments(owner, repo, pullRequestId) {
+    async getPullRequestComments(pullRequestId) {
         const { data } = await this.octokit.rest.pulls.listReviewComments({
-            owner,
-            repo,
+           owner: this.owner,
+           repo: repo,
             pull_number: pullRequestId,
         });
         return data;

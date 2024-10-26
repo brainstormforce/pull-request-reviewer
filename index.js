@@ -25,8 +25,10 @@ class PullRequestReviewer {
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
         const githubToken = core.getInput('GITHUB_TOKEN');
 
+        core.info("#1 ------ ")
         const githubHelper = new GithubHelper(owner, repo, githubToken);
 
+        core.info("#2 ------ ")
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
                 const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
@@ -40,6 +42,8 @@ class PullRequestReviewer {
             return changedFiles.filter(file => isFileToReview(file.filename.replace(/\\/g, '/')));
         };
 
+
+        core.info("#3 ------ ")
         try {
 
             // List all PR files

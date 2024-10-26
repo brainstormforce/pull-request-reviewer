@@ -121,7 +121,6 @@ class GitHubHelper {
         }
     }
 
-
     async getPullRequestComments(pullRequestId) {
         const { data } = await this.octokit.rest.pulls.listReviewComments({
            owner: this.owner,

@@ -6,7 +6,9 @@ class AiHelper {
 
     async checkCommentResolved(patch, commentText) {
 
-        commentText = commentText.match(/How:(.*)(?=Impact:)/s)?.[1].trim()
+        let tmpCommentText = commentText.match(/How:(.*)(?=Impact:)/s)?.[1].trim();
+
+        commentText = tmpCommentText ? tmpCommentText : commentText;
 
         const userPrompt = `
         

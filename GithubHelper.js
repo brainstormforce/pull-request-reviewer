@@ -5,10 +5,11 @@ const axios = require("axios");
 
 class GitHubHelper {
 
-    constructor(owner, repo, token) {
+    constructor(owner, repo, pull_number, token) {
         this.octokit = github.getOctokit(token);
         this.owner = owner;
         this.repo = repo;
+        this.pull_number = pull_number;
 
     }
 
@@ -107,11 +108,12 @@ class GitHubHelper {
         }
     }
 
-    async updateReviewComment( comment_id, body) {
+    async updateReviewComment(comment_id, body) {
         try {
-            await this.octokit.rest.pulls.updateReviewComment({
+            await this.octokit.rest.pulls.createReplyForReviewComment({
                 owner: this.owner,
                 repo: this.repo,
+                pull_number: this.pull_number,
                 comment_id,
                 body,
             });

@@ -26,7 +26,7 @@ class PullRequestReviewer {
         const githubToken = core.getInput('GITHUB_TOKEN');
 
 
-        const githubHelper = new GithubHelper(owner, repo, githubToken);
+        const githubHelper = new GithubHelper(owner, repo, pullRequestId,  githubToken);
 
 
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {

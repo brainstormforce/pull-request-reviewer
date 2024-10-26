@@ -454,7 +454,7 @@ class AiHelper {
         }
 
         core.info("----------- PR Comments -----------");
-        core.info(JSON.stringify(prComments));
+        core.info(JSON.stringify(prComments, null, 2));
         core.info("----------------------------");
 
         process.exit(0)

@@ -101,7 +101,7 @@ class AiHelper {
 
     constructor(apiKey, githubHelper, prDetails) {
         this.openai = new OpenAI({ apiKey });
-        this.githubHelper = fileContentGetter;
+        this.githubHelper = githubHelper;
         this.prDetails = prDetails;
         this.fileCache = {};
     }

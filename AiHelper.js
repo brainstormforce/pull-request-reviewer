@@ -46,7 +46,7 @@ class AiHelper {
                         "properties": {
                             "status": {
                                 "type": "string",
-                                "description": "<Resolved|Unresolved> - [ If resolved use praising words else use constructive feedback ] . Ex. Resolved - Thank you."
+                                "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not. If resolved, appriciate. If unresolved, specify the reasons why the comment remains unaddressed.",
                             }
                         },
                         "required": [

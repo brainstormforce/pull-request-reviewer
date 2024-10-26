@@ -335,6 +335,7 @@ class AiHelper {
 
     async executeCodeReview(changedFiles, existingPrComments, githubHelper) {
         const simpleChangedFiles = changedFiles.map(file => ({
+            blob_url: file.blob_url,
             filename: file.filename,
             status: file.status,
             additions: file.additions,
@@ -451,7 +452,12 @@ class AiHelper {
                                     "type": "object",
                                     "properties": {
                                         "commit_id": {
-
+                                            "type": "string",
+                                            "description": "Extract the commit_id from the blob_url. https://github.com/<owner>/<repo>/blob/<commit_id>/*"
+                                        },
+                                        "side": {
+                                            "type": "string",
+                                            "description": "The side of the diff that the pull request's changes appear on. Can be LEFT or RIGHT. Use LEFT for deletions that appear in red. Use RIGHT for additions that appear in green or unchanged lines that appear in white and are shown for context. For a multi-line comment, side represents whether the last line of the comment range is a deletion or addition."
                                         },
                                         "line": {
                                             "type": "integer",
@@ -492,6 +498,8 @@ class AiHelper {
                                         }
                                     },
                                     "required": [
+                                        "commit_id",
+                                        "side",
                                         "line",
                                         "path",
                                         "review_comment"

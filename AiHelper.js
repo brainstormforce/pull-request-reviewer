@@ -370,12 +370,14 @@ class AiHelper {
 
         }
 
-        core.info("----------- PR Comments -----------");
-        core.info(JSON.stringify(prComments, null, 2));
-        core.info("----------------------------");
-
-        process.exit(0)
-
+        // Loop on the prComments to add the comments to the PR
+        for (const comments of prComments) {
+            for (const comment of comments) {
+                const {commit_id, side, line, path, review_comment} = comment;
+                const {what, why, how, impact} = review_comment;
+                await githubHelper.createReviewComment(commit_id, side, line, path, `What: ${what}\n\nWhy: ${why}\n\nHow: ${how}\n\nImpact: ${impact}\n`);
+            }
+        }
 
 
     }

@@ -345,8 +345,7 @@ class AiHelper {
 
         // Get the comments for each file
 
-
-
+        core.info(JSON.stringify(existingPrComments, null, 2));
 
         const prComments = [];
         // Loop to each file to send completion openai request

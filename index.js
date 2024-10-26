@@ -46,7 +46,7 @@ class PullRequestReviewer {
         try {
 
             // List all PR files
-            const {data: changedFiles} = await githubHelper.listFiles(pullRequestId);
+            const changedFiles = await githubHelper.listFiles(pullRequestId);
 
             /**
              * Filter files based on the extensions and paths provided.

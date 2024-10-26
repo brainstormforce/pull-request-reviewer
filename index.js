@@ -75,7 +75,7 @@ class PullRequestReviewer {
             /**
              * Initialize AI Helper
              */
-            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator);
+            const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prDetails);
 
             await aiHelper.executeCodeReview(reviewableFiles);
 

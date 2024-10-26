@@ -86,10 +86,11 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).task_id;
     }
 
-    constructor(apiKey, fileContentGetter, fileCommentator) {
+    constructor(apiKey, fileContentGetter, fileCommentator, prDetails) {
         this.openai = new OpenAI({ apiKey });
         this.fileContentGetter = fileContentGetter;
         this.fileCommentator = fileCommentator;
+        this.prDetails = prDetails;
         this.fileCache = {};
     }
 

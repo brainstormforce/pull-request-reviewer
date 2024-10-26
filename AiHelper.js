@@ -19,6 +19,10 @@ class AiHelper {
                 ${commentText}
                 `;
 
+        core.info('----------- User Prompt -----------');
+        core.info('userPrompt: ' + userPrompt);
+        core.info('---------------------------------------------');
+
 
         const response = await this.openai.chat.completions.create({
             model: 'gpt-4o-mini',

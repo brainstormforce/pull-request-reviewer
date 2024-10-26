@@ -369,6 +369,9 @@ class AiHelper {
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
 
+
+            core.info('processing file: ' + file.filename);
+
             const response = await this.openai.chat.completions.create({
                 model: 'gpt-4o-mini',
                 messages: [

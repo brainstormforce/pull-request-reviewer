@@ -465,7 +465,7 @@ class AiHelper {
                                         },
                                         "line": {
                                             "type": "integer",
-                                            "description": "Line number calculated as from snippet start line + line number in snippet."
+                                            "description": "Line number in the code snippet. Ex. @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14."
                                         },
                                         "path": {
                                             "type": "string",
@@ -477,7 +477,7 @@ class AiHelper {
                                             "properties": {
                                                 "what": {
                                                     "type": "string",
-                                                    "description": "Describes the specific issue or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
+                                                    "description": "Describes the specific issue by quoting the specific code or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
                                                 },
                                                 "why": {
                                                     "type": "string",

@@ -19,7 +19,7 @@ class AiHelper {
 
 
         const response = await this.openai.chat.completions.create({
-            model: this.model,
+            model: 'gpt-4o-mini',
             messages: [
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
@@ -342,10 +342,6 @@ class AiHelper {
             patch: file.patch
         }));
 
-
-        // Get the comments for each file
-
-        core.info(JSON.stringify(existingPrComments, null, 2));
 
         const prComments = [];
         // Loop to each file to send completion openai request

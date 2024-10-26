@@ -363,6 +363,18 @@ class AiHelper {
             5. **Best Practices:** Ensure the code follows best practices and relevant coding standards.
             6. **Naming & Structure:** Evaluate variable names and the overall structure for clarity and simplicity.
             7. **Documentation:** Check for adequate comments and documentation explaining code functionality.
+            
+            You can use PR title and description for more context.
+            
+            PR title:
+            \`\`\`
+            ${this.prDetails.prTitle}
+            \`\`\`
+            
+            PR description:
+            \`\`\`
+            ${this.prDetails.prDescription}
+            \`\`\`
             `;
 
         const prComments = [];

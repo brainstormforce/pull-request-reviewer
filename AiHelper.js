@@ -330,8 +330,7 @@ class AiHelper {
         }));
 
 
-        const systemPrompt =
-            `
+        const systemPrompt = `
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
             So analyse what is removed and what is added and provide the review comments.
                         
@@ -383,91 +382,12 @@ class AiHelper {
         const prComments = [];
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
-
-
             core.info('processing file: ' + file.filename);
 
-            const response = await this.openai.chat.completions.create({
-                model: 'gpt-4o-mini',
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: `${JSON.stringify(file)}` },
-                ],
-                response_format: {
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "code_review_comments",
-                        "strict": true,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "comments": {
-                                    "type": "array",
-                                    "description": "A collection of review comments for specific code snippets.",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "line": {
-                                                "type": "integer",
-                                                "description": "The line number in the code snippet where the comment applies."
-                                            },
-                                            "path": {
-                                                "type": "string",
-                                                "description": "The path of the file containing the code snippet."
-                                            },
-                                            "review_comment": {
-                                                "type": "object",
-                                                "description": "The review comment detailing the object, why it is commented, and how it can be improved.",
-                                                "properties": {
-                                                    "what": {
-                                                        "type": "string",
-                                                        "description": "Describes the specific issue or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
-                                                    },
-                                                    "why": {
-                                                        "type": "string",
-                                                        "description": "Why the change is recommended. It clarifies the potential issue or downside of the current implementation, giving the developer insight into the risks, limitations, or best practices they may have overlooked."
-                                                    },
-                                                    "how": {
-                                                        "type": "string",
-                                                        "description": "provides guidance or a specific example on how to address the issue. Generally contains the refactored code snippet with may include a brief explanation, or reference to a best practice that can help the developer implement the suggested change effectively."
-                                                    },
-                                                    "impact": {
-                                                        "type": "string",
-                                                        "description": "Explains the positive outcomes or benefits of making the suggested change, such as improved security, performance, readability, or maintainability. It can also highlight potential negative impacts if the change isn’t made."
-                                                    }
-                                                },
-                                                "required": [
-                                                    "what",
-                                                    "why",
-                                                    "how",
-                                                    "impact"
-                                                ],
-                                                "additionalProperties": false
-                                            }
-                                        },
-                                        "required": [
-                                            "line",
-                                            "path",
-                                            "review_comment"
-                                        ],
-                                        "additionalProperties": false
-                                    }
-                                }
-                            },
-                            "required": [
-                                "comments"
-                            ],
-                            "additionalProperties": false
-                        }
-                    }
-                },
-                temperature: 1,
-                top_p: 1,
-                max_tokens: 8000,
-            });
-
-            // Get the comments and store in global variable to process furether
-            prComments.push(JSON.parse(response.choices[0].message.content).comments);
+            const response = await this.reviewFile(systemPrompt, file);
+            if (response.choices[0].message.content) {
+                prComments.push(JSON.parse(response.choices[0].message.content).comments);
+            }
 
         }
 
@@ -479,6 +399,87 @@ class AiHelper {
 
 
 
+    }
+
+    async reviewFile(systemPrompt, file) {
+        return this.openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {role: "system", content: systemPrompt},
+                {role: "user", content: `${JSON.stringify(file)}`},
+            ],
+            response_format: {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "code_review_comments",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "comments": {
+                                "type": "array",
+                                "description": "A collection of review comments for specific code snippets.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "line": {
+                                            "type": "integer",
+                                            "description": "The line number in the code snippet where the comment applies."
+                                        },
+                                        "path": {
+                                            "type": "string",
+                                            "description": "The path of the file containing the code snippet."
+                                        },
+                                        "review_comment": {
+                                            "type": "object",
+                                            "description": "The review comment detailing the object, why it is commented, and how it can be improved.",
+                                            "properties": {
+                                                "what": {
+                                                    "type": "string",
+                                                    "description": "Describes the specific issue or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
+                                                },
+                                                "why": {
+                                                    "type": "string",
+                                                    "description": "Why the change is recommended. It clarifies the potential issue or downside of the current implementation, giving the developer insight into the risks, limitations, or best practices they may have overlooked."
+                                                },
+                                                "how": {
+                                                    "type": "string",
+                                                    "description": "provides guidance or a specific example on how to address the issue. Generally contains the refactored code snippet with may include a brief explanation, or reference to a best practice that can help the developer implement the suggested change effectively."
+                                                },
+                                                "impact": {
+                                                    "type": "string",
+                                                    "description": "Explains the positive outcomes or benefits of making the suggested change, such as improved security, performance, readability, or maintainability. It can also highlight potential negative impacts if the change isn’t made."
+                                                }
+                                            },
+                                            "required": [
+                                                "what",
+                                                "why",
+                                                "how",
+                                                "impact"
+                                            ],
+                                            "additionalProperties": false
+                                        }
+                                    },
+                                    "required": [
+                                        "line",
+                                        "path",
+                                        "review_comment"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        },
+                        "required": [
+                            "comments"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 8000,
+        });
     }
 
     async executeCodeReviewImpl(simpleChangedFiles) {

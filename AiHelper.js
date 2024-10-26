@@ -6,10 +6,6 @@ class AiHelper {
 
     async checkCommentResolved(patch, commentText) {
 
-        let tmpCommentText = commentText.match(/How:(.*)(?=Impact:)/s)?.[1].trim();
-
-        commentText = tmpCommentText ? tmpCommentText : commentText;
-
         const userPrompt = `
         
                 Focus on the **How** section to check whether it has been implemented.
@@ -366,7 +362,12 @@ class AiHelper {
 
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
-                const resolved = await this.checkCommentResolved(file.patch, comment.body);
+
+
+                let tmpCommentText = comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim() || comment.body;
+                if (!tmpCommentText) continue;
+
+                const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 core.info('Comment resolved status: ' + resolved.status);
                 if(resolved.status === 'Resolved') {
                     await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');

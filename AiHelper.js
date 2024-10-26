@@ -400,9 +400,7 @@ class AiHelper {
             
             \`\`\`
             Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, 
-            while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.
-            
-            If you are reviewing the code for 'a++', then the relevant line will be line 16, calculated as 14 plus the number of lines leading up to this specific code line.
+            while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.            
             -----
             
             ## Focus area
@@ -465,7 +463,7 @@ class AiHelper {
                                         },
                                         "line": {
                                             "type": "integer",
-                                            "description": "Line number in the code snippet. Ex. @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14."
+                                            "description": "To find a specific code line in a diff, locate the base line number from the diff header (e.g., @@ -14,6 +14,6 @@), then count the lines from there to your target line."
                                         },
                                         "path": {
                                             "type": "string",

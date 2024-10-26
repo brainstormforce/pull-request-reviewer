@@ -386,7 +386,8 @@ class AiHelper {
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
             So analyse what is removed and what is added and provide the review comments.
                         
-            First, understand the Diff format to improve your review process. Focus on identifying which code has been removed and what has been newly added, and use this context exclusively for your review.     -----
+            First, understand the Diff format to improve your review process. 
+            Focus on identifying which code has been removed and what has been newly added, and use this context exclusively for your review.     -----
             \`\`\`diff
             diff --git a/loader.php b/loader.php
             index ff652b5..f271a52 100644
@@ -398,7 +399,10 @@ class AiHelper {
                        c = a + b
             
             \`\`\`
-            Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.
+            Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, 
+            while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.
+            
+            If you are providing a review on 'a++' then line will be 16 that is 14 + (no of lines below)
             -----
             
             ## Focus area
@@ -461,7 +465,7 @@ class AiHelper {
                                         },
                                         "line": {
                                             "type": "integer",
-                                            "description": "The line number in the code snippet where the comment applies."
+                                            "description": "Line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to."
                                         },
                                         "path": {
                                             "type": "string",

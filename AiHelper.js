@@ -46,7 +46,7 @@ class AiHelper {
                         "properties": {
                             "status": {
                                 "type": "string",
-                                "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not. If resolved, appriciate. If unresolved, specify the reasons why the comment remains unaddressed.",
+                                "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not. If resolved, appreciate. If unresolved, specify the reasons why the comment remains unaddressed. Ex. Resolved - Thank you.",
                             }
                         },
                         "required": [

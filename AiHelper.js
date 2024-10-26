@@ -330,6 +330,35 @@ class AiHelper {
         }));
 
 
+        // Get the comments for each file
+
+
+
+
+        const prComments = [];
+        // Loop to each file to send completion openai request
+        for (const file of simpleChangedFiles) {
+            core.info('processing file: ' + file.filename);
+
+            const response = await this.reviewFile(file);
+            if (response.choices[0].message.content) {
+                prComments.push(JSON.parse(response.choices[0].message.content).comments);
+            }
+
+        }
+
+        core.info("----------- PR Comments -----------");
+        core.info(JSON.stringify(prComments, null, 2));
+        core.info("----------------------------");
+
+        process.exit(0)
+
+
+
+    }
+
+    async reviewFile(file) {
+
         const systemPrompt = `
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
             So analyse what is removed and what is added and provide the review comments.
@@ -379,29 +408,6 @@ class AiHelper {
             \`\`\`
             `;
 
-        const prComments = [];
-        // Loop to each file to send completion openai request
-        for (const file of simpleChangedFiles) {
-            core.info('processing file: ' + file.filename);
-
-            const response = await this.reviewFile(systemPrompt, file);
-            if (response.choices[0].message.content) {
-                prComments.push(JSON.parse(response.choices[0].message.content).comments);
-            }
-
-        }
-
-        core.info("----------- PR Comments -----------");
-        core.info(JSON.stringify(prComments, null, 2));
-        core.info("----------------------------");
-
-        process.exit(0)
-
-
-
-    }
-
-    async reviewFile(systemPrompt, file) {
         return this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [

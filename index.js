@@ -77,6 +77,15 @@ class PullRequestReviewer {
              */
             const aiHelper = new AiHelper(openaiApiKey, fileContentGetter, fileCommentator, prDetails);
 
+
+            const prComments = await githubHelper.getPullRequestComments(owner, repo, pullRequestId);
+
+            core.info('PR Comments: ' + JSON.stringify(prComments, null, 2));
+
+            process.exit(0);
+
+
+
             await aiHelper.executeCodeReview(reviewableFiles);
 
         } catch (error) {

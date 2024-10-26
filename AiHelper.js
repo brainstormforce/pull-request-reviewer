@@ -333,6 +333,8 @@ class AiHelper {
         const systemPrompt =
             `
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
+            So analyse what is removed and what is added and provide the review comments.
+                        
             First, understand the Diff format to improve your review process. Focus on identifying which code has been removed and what has been newly added, and use this context exclusively for your review.     -----
             \`\`\`diff
             diff --git a/loader.php b/loader.php

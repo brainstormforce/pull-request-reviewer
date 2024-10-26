@@ -355,6 +355,7 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
                 const resolved = await this.checkCommentResolved(file.patch, comment.body);
+                core.info('Comment resolved status: ' + resolved.status);
                 if(resolved.status === 'Resolved') {
                     await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }

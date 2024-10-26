@@ -355,7 +355,7 @@ class AiHelper {
             for (const comment of comments) {
                 const resolved = await this.checkCommentResolved(file.patch, comment.body);
 
-                core.info('----------- Comment Resolved -----------');
+                core.info('----------- Comment -----------');
                 core.info(`Resolved: ${resolved.status}`);
                 core.info('----------------------------');
 

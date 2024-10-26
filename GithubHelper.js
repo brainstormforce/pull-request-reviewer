@@ -86,13 +86,6 @@ class GitHubHelper {
 
     async createReviewComment( commit_id, side, line, path, body) {
         try {
-
-            core.info("---------------- Creating Review Comment ----------------");
-            core.info(`Body: ${body}`);
-            core.info(`Path: ${path}`);
-            core.info(`Line: ${line}`);
-            core.info("---------------------------------------------");
-
             await this.octokit.rest.pulls.createReviewComment({
                 owner: this.owner,
                 repo: this.repo,

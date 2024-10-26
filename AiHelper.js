@@ -402,7 +402,7 @@ class AiHelper {
             Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, 
             while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.
             
-            If you are providing a review on 'a++' then line will be 16 that is ( 14 + (no of lines below) )
+            If you are providing a review on 'a++' then line will be 16 that is ( 14 + (no of lines to the code line) )
             -----
             
             ## Focus area

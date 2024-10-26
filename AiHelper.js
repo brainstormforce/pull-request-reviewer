@@ -374,14 +374,12 @@ class AiHelper {
                 }
             }
 
-
             const response = await this.reviewFile(file, commentsBody);
             if (response.choices[0].message.content) {
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
             }
 
         }
-
 
         core.info('----------- PR Comments -----------');
         core.info(JSON.stringify(prComments, null, 2));

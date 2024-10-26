@@ -46,7 +46,8 @@ class AiHelper {
                         "properties": {
                             "status": {
                                 "type": "string",
-                                "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not. If resolved, appreciate. If unresolved, specify the reasons why the comment remains unaddressed. Ex. Resolved - Thank you.",
+                                "enum": ["Resolved", "Unresolved"],
+                                "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not.",
                             }
                         },
                         "required": [
@@ -354,15 +355,11 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
                 const resolved = await this.checkCommentResolved(file.patch, comment.body);
-
-                core.info('----------- Comment -----------');
-                core.info(`Resolved: ${resolved.status}`);
-                core.info('----------------------------');
-
-                await githubHelper.updateReviewComment(comment.id, resolved.status);
+                if(resolved.status === 'Resolved') {
+                    await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
+                }
             }
 
-            process.exit(0)
             const response = await this.reviewFile(file);
             if (response.choices[0].message.content) {
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);

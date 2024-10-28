@@ -102,6 +102,41 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).task_id;
     }
 
+    async checkPrStatus(prevComments, currentComments) {
+        const response = await this.openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
+                { role: "user", content: prTitle },
+            ],
+            response_format: {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "pr_title_task_id",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "task_id": {
+                                "type": "string",
+                                "description": "The extracted task ID from the pull request title."
+                            }
+                        },
+                        "required": [
+                            "task_id"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 2000,
+        });
+
+        return JSON.parse(response.choices[0].message.content).task_id;
+    }
+
     constructor(apiKey, githubHelper, prDetails) {
         this.openai = new OpenAI({ apiKey });
         this.githubHelper = githubHelper;
@@ -162,13 +197,18 @@ class AiHelper {
 
         }
 
-        core.info('----------- PR Comments -----------');
+        // Code to Extract body from  existingPrComments
+        existingPrComments = existingPrComments.map(comment => {
+           return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
+        });
+
+
+        core.info('----------- OLD PR Comments -----------');
         core.info(JSON.stringify(existingPrComments, null, 2));
         core.info('---------------------------------------------');
-        core.info(JSON.stringify(prComments, null, 2));
-        core.info('---------------------------------------------');
 
-        process.exit(0);
+
+
 
         // Loop on the prComments to add the comments to the PR
         for (const comments of prComments) {
@@ -178,6 +218,8 @@ class AiHelper {
                 await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }
+
+        process.exit(0);
 
 
     }

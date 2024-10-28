@@ -110,231 +110,6 @@ class AiHelper {
         this.fileCache = {};
     }
 
-
-
-    async initCodeReviewAssistant() {
-
-        let instructions = `
-            You are an expert AI responsible for reviewing GitHub Pull Requests (PRs) with a focus on code quality, functionality, and alignment with provided JIRA tasks.
-            You will be given a PR title, description, and possibly JIRA task details for context. Your goal is to analyze the code changes and suggest improvements or raise concerns based on the following guidelines:
-            
-            Actions:
-            - Code Comments: Use 'addReviewCommentToFileLine' to leave specific comments on lines of code that contain mistakes or potential issues. Pay close attention to line numbers.
-            - Request File Content: Use 'getFileContent' when necessary to gather more context for better analysis.
-            - Final PR Judgment: Use updatePrStatus to either:
-                 - APPROVE if the PR is clean, or
-                 - REQUEST CHANGES if issues are found.
-            
-            Focus Areas:
-            - Prioritize new code that starts with +.
-            - Suggest code refactoring or optimizations when appropriate using backticks (e.g., \`optimizeFunction()\`).
-            - Validate functionality against the JIRA task and ensure that all requirements are met.
-            - Look for logical errors, security vulnerabilities, and typos.
-            - Avoid repeated comments for the same issue; instead, highlight other critical mistakes.
-            - Ignore code styling issues but ensure code standard consistency.
-            - Always be concise and simply respond with "LGTM" if the code looks good with no major issues.
-            
-            Warnings:
-            - Be mindful that line numbers in the files start from 1.
-            - Focus on actionable feedback without suggesting vague improvements.
-            
-            More context:
-            
-            PR Title:
-            \`\`\`
-        ${this.prDetails.prTitle}
-             \`\`\`
-             
-             PR Description:
-            \`\`\`
-        ${this.prDetails.prDescription}
-            \`\`\`
-            `;
-
-        if (this.prDetails.jiratTaskTitle || this.prDetails.jiraTaskDescription) {
-            instructions += `
-            JIRA Task ID: 
-            
-            \`\`\`
-            ${this.prDetails.jiratTaskTitle}
-            \`\`\`
-            
-            JIRA Task Description: 
-            
-            \`\`\`
-            ${this.prDetails.jiraTaskDescription}
-            \`\`\`
-            `;
-        }
-
-
-        this.assistant = await this.openai.beta.assistants.create({
-            name: "BSF - AI Code Reviewer",
-            instructions: instructions
-,           model: "gpt-4o-mini",
-            tool_resources: {
-                "code_interpreter": {
-                    "file_ids": []
-                }
-            },
-            tools:  [
-                {
-                    "type": "code_interpreter"
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "getFileContent",
-                        "description": "Retrieves the file content to better understand the provided changes",
-                        "parameters": {
-                            "type": "object",
-                            "required": [
-                                "pathToFile",
-                                "startLineNumber",
-                                "endLineNumber"
-                            ],
-                            "properties": {
-                                "pathToFile": {
-                                    "type": "string",
-                                    "description": "The fully qualified path to the file."
-                                },
-                                "endLineNumber": {
-                                    "type": "integer",
-                                    "description": "The ending line number of the code segment of interest."
-                                },
-                                "startLineNumber": {
-                                    "type": "integer",
-                                    "description": "The starting line number of the code segment of interest."
-                                }
-                            }
-                        },
-                        "strict": false
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "addReviewCommentToFileLine",
-                        "description": "Adds an AI-generated review comment to the specified line in a file. DO NOT provide 'ensure', 'verify' etc like reviews.",
-                        "parameters": {
-                            "type": "object",
-                            "required": [
-                                "side",
-                                "lineNumber",
-                                "fileName",
-                                "foundIssueDescription"
-                            ],
-                            "properties": {
-                                "side": {
-                                    "type": "string",
-                                    "description": "In a split diff view, the side of the diff that the pull request's changes appear on. Can be LEFT or RIGHT. Use LEFT for deletions that appear in red. Use RIGHT for additions that appear in green or unchanged lines that appear in white and are shown for context. For a multi-line comment, side represents whether the last line of the comment range is a deletion or addition. "
-                                },
-                                "fileName": {
-                                    "type": "string",
-                                    "description": "The relative path to the file."
-                                },
-                                "lineNumber": {
-                                    "type": "integer",
-                                    "description": "The line number in the file where the issue was found. The line of the blob in the pull request diff that the comment applies to. For a multi-line comment, the last line of the range that your comment applies to."
-                                },
-                                "foundIssueDescription": {
-                                    "type": "string",
-                                    "description": "Description of the issue found."
-                                }
-                            }
-                        },
-                        "strict": false
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "updatePrStatus",
-                        "description": "Consider all above provided review comments. If no actionable review provided then mark event_type as APPROVE",
-                        "parameters": {
-                            "type": "object",
-                            "required": [
-                                "event",
-                                "body"
-                            ],
-                            "properties": {
-                                "event": {
-                                    "type": "string",
-                                    "description": "The event indicating the nature of the change request.",
-                                    "enum": [
-                                        "APPROVE",
-                                        "REQUEST_CHANGES",
-                                        "COMMENT"
-                                    ]
-                                },
-                                "body": {
-                                    "type": "string",
-                                    "description": "Provide final summary review about PR in 50-100 words"
-                                }
-                            },
-                            "additionalProperties": false
-                        },
-                        "strict": true
-                    }
-                }
-            ]
-        });
-    }
-
-    async getFileContent(args) {
-        const { pathToFile, startLineNumber, endLineNumber } = args;
-        const span = 20;
-
-        let content = '';
-        if (pathToFile in this.fileCache) {
-            content = this.fileCache[pathToFile];
-        }
-        else {
-            content = await this.fileContentGetter(pathToFile);
-        }
-
-       // Extract the lines from content from start and end line
-        const lines = content.split("\n");
-        const start = Math.max(0, startLineNumber - span);
-        const end = Math.min(lines.length, endLineNumber + span);
-        content = lines.slice(start, end).join("\n");
-
-        core.info('----------- File Content After extraction -----------');
-        core.info(content);
-        core.info("----------------------------");
-
-
-        return content;
-    }
-
-    async updateReviewPrStatus(args) {
-
-        core.info('----------- PR Status Update Requested -----------');
-        core.info(`Event: ${args.event}`);
-        core.info(`Body: ${args.body}`);
-        core.info('---------------------------------------------');
-
-        const { event, body } = args;
-        try {
-            await this.prStatusUpdater(event, body);
-            return "The PR status has been updated.";
-        }
-        catch (error) {
-            return `There is an error in the 'updateReviewPrStatus' usage! Error message:\n${JSON.stringify(error)}`
-        }
-    }
-
-    async addReviewCommentToFileLine(args) {
-        const { fileName, lineNumber, foundIssueDescription, side } = args;
-        try {
-            await this.fileCommentator(foundIssueDescription, fileName, lineNumber, side);
-            return "The note has been published.";
-        }
-        catch (error) {
-            return `There is an error in the 'addReviewCommentToFileLine' usage! Error message:\n${JSON.stringify(error)}`
-        }
-    }
-
     async executeCodeReview(changedFiles, existingPrComments, githubHelper) {
         const simpleChangedFiles = changedFiles.map(file => ({
             blob_url: file.blob_url,
@@ -428,6 +203,11 @@ class AiHelper {
             while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.            
             -----
             
+          ##WARNING! -  Here are previous comments on this file, do not repeat those comments:
+            \`\`\`
+            ${commentsBody}
+            \`\`\`
+            
             ## Focus area
             - Analyze the code diff to understand what changes have been made.
             - Focus on areas such as code style consistency, efficiency, readability, and correctness.
@@ -460,14 +240,6 @@ class AiHelper {
             
             `;
 
-        if( commentsBody ) {
-            systemPrompt += `
-            ##WARNING! -  Here are previous comments on this file, do not repeat those comments:
-            \`\`\`
-            ${commentsBody}
-            \`\`\`
-            `;
-        }
 
 
         core.info('----------- System Prompt -----------');
@@ -597,39 +369,7 @@ class AiHelper {
         }
     }
 
-    async processRun() {
-        do {
-            this.runStatus = await this.openai.beta.threads.runs.retrieve(this.thread.id, this.run.id);
 
-            let tools_results = []
-            if (this.runStatus.status === 'requires_action') {
-                for (const toolCall of this.runStatus.required_action.submit_tool_outputs.tool_calls) {
-                    let result = '';
-                    let args = JSON.parse(toolCall.function.arguments);
-                    if (toolCall.function.name == 'getFileContent') {
-                        result = await this.getFileContent(args);
-                    }
-                    else if (toolCall.function.name == 'addReviewCommentToFileLine') {
-                        result = await this.addReviewCommentToFileLine(args);
-                    }
-                    else if (toolCall.function.name == 'updatePrStatus') {
-                        result = await this.updateReviewPrStatus(args);
-                    }
-                    else {
-                        result = `Unknown tool requested: ${toolCall.function.name}`;
-                    }
-
-                    tools_results.push({ tool_call_id: toolCall.id, output: result })
-                }
-
-                await this.openai.beta.threads.runs.submitToolOutputs(this.thread.id, this.run.id, {
-                    tool_outputs: tools_results,
-                });
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        } while (this.runStatus.status !== "completed");
-    }
 }
 
 module.exports = AiHelper;

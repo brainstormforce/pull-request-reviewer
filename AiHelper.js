@@ -166,6 +166,57 @@ class AiHelper {
 
         this.fileCache = {};
     }
+    async checkApprovalStatus(prComments) {
+        const userPrompt = `
+                
+            PR Comments:
+            ${JSON.stringify(prComments)}
+        `;
+
+        const response = await this.openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: "system", content: `
+                    Determine the nature of a Pull Request (PR) from given comments and identify doable tasks based on their importance. If the assessment is favorable, approve the PR.
+
+                    # Steps
+                    1. **Analyze Comments**: Evaluate the comments provided on the PR to understand the context and the nature of changes proposed.
+                    2. **Identify Tasks**: Break down the tasks mentioned in the comments, determine their importance, and prioritize them accordingly.
+                    3. **Approve Decision**: Based on the evaluation of comments and identified tasks, decide if the PR should be approved.
+        
+                    # Notes
+                    - If any task is critical and unresolved, the approval status should be "Not Approved."
+              
+                ` },
+                { role: "user", content: userPrompt },
+            ],
+            response_format: {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "is_pull_request_approved",
+                    "strict": true,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "is_approved": {
+                                "type": "boolean",
+                                "description": "true if approved, else false"
+                            }
+                        },
+                        "required": [
+                            "is_approved"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 2000,
+        });
+
+        return JSON.parse(response.choices[0].message.content).is_approved;
+    }
 
     async executeCodeReview(changedFiles, existingPrComments, githubHelper) {
         const simpleChangedFiles = changedFiles.map(file => ({
@@ -208,7 +259,7 @@ class AiHelper {
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 if(resolved.status === 'Resolved') {
-                    await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
+                    await githubHelper.deleteComment(comment.id);
                 }
             }
 
@@ -244,9 +295,7 @@ class AiHelper {
                     continue;
                 }
 
-                core.info("Creating comment");
-
-                // await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
+                await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }
 

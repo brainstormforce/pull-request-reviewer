@@ -116,6 +116,19 @@ class GitHubHelper {
         }
     }
 
+    async deleteComment(comment_id) {
+        try {
+            await this.octokit.rest.issues.deleteComment({
+                owner: this.owner,
+                repo: this.repo,
+                comment_id
+            });
+        } catch (error) {
+            core.error(error.message);
+        }
+
+    }
+
     async getPullRequestComments(pullRequestId) {
         const { data } = await this.octokit.rest.pulls.listReviewComments({
             owner: this.owner,
@@ -123,6 +136,11 @@ class GitHubHelper {
             pull_number: pullRequestId,
         });
         return data;
+    }
+
+
+    async checkApprovalStatus(prComments) {
+
     }
 
 }

@@ -71,9 +71,21 @@ class PullRequestReviewer {
              */
             const aiHelper = new AiHelper(openaiApiKey, githubHelper, prDetails);
 
-            const prComments = await githubHelper.getPullRequestComments( pullRequestId);
+            let prComments = await githubHelper.getPullRequestComments( pullRequestId);
 
             await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
+
+            prComments = await githubHelper.getPullRequestComments( pullRequestId);
+
+            let existingPrComments = prComments.map(comment => {
+                return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
+            }).filter(Boolean);
+
+            let isApproved = await aiHelper.checkApprovalStatus(prComments);
+
+            if( isApproved ) {
+                await githubHelper.createReview(pullRequestId, "APPROVE", "The code review is completed and approved by the reviewer.");
+            }
 
         } catch (error) {
             core.error(error.message);

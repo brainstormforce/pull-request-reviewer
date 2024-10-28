@@ -270,19 +270,9 @@ class AiHelper {
 
         }
 
-
-
-
-
-
         existingPrComments = existingPrComments.map(comment => {
            return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
         }).filter(Boolean);
-
-
-
-
-
 
         // Loop on the prComments to add the comments to the PR
         for (const comments of prComments) {

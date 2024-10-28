@@ -73,8 +73,15 @@ class PullRequestReviewer {
 
             let prComments = await githubHelper.getPullRequestComments( pullRequestId);
 
+            core.info('Pr Comments: ' + prComments);
+
+            process.exit(0);
+
             await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
 
+            /**
+             * Get the PR comments again after the review to check if the reviewer has approved the PR.
+             */
             prComments = await githubHelper.getPullRequestComments( pullRequestId);
 
             let existingPrComments = prComments.map(comment => {

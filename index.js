@@ -19,7 +19,7 @@ class PullRequestReviewer {
 
         const owner = context.repo.owner;
         const repo = context.repo.repo;
-        const includeExtensions = core.getInput('INCLUDE_EXTENSIONS') || ["php", "js", "jsx"];
+        const includeExtensions = core.getInput('INCLUDE_EXTENSIONS') || ["php", "js", "jsx", "ts", "tsx", "css", "scss", "html", "json"];
         const excludeExtensions = core.getInput('EXCLUDE_EXTENSIONS') || [];
         const includePaths = core.getInput('INCLUDE_PATHS') || [];
         const excludePaths = core.getInput('EXCLUDE_PATHS') || [];

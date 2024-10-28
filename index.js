@@ -81,11 +81,13 @@ class PullRequestReviewer {
                 return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
             }).filter(Boolean);
 
-            let isApproved = await aiHelper.checkApprovalStatus(prComments);
+            let isApproved = await aiHelper.checkApprovalStatus(existingPrComments);
 
             if( isApproved ) {
                 await githubHelper.createReview(pullRequestId, "APPROVE", "The code review is completed and approved by the reviewer.");
             }
+
+            core.info("---------------------Completed Reviewing Pull Request---------------------");
 
         } catch (error) {
             core.error(error.message);

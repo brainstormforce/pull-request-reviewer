@@ -18,6 +18,7 @@ class AiHelper {
             ${commentText}
         `;
 
+        core.info('User Prompt: ' + userPrompt);
 
         const response = await this.openai.chat.completions.create({
             model: 'gpt-4o',
@@ -361,8 +362,15 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
 
+                let tmpCommentText = comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
 
-                let tmpCommentText = comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim() || comment.body;
+                if( tmpCommentText ) {
+                    tmpCommentText = 'What: ' + tmpCommentText + '\n\n';
+                    tmpCommentText = 'How: ' + comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim();
+                } else {
+                    tmpCommentText = comment.body;
+                }
+
                 if (!tmpCommentText) continue;
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);

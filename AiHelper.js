@@ -153,8 +153,7 @@ class AiHelper {
                 }
             }
 
-            const commentsBodyWhat = comments.map(comment =>  '\n- ' + comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim());
-            const response = await this.reviewFile(file, commentsBodyWhat);
+            const response = await this.reviewFile(file);
             if (response.choices[0].message.content) {
                 core.info(JSON.stringify(JSON.parse(response.choices[0].message.content).comments, null, 2));
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
@@ -162,9 +161,10 @@ class AiHelper {
 
         }
 
-        // core.info('----------- PR Comments -----------');
-        // core.info(JSON.stringify(prComments, null, 2));
-        // core.info('---------------------------------------------');
+        core.info('----------- PR Comments -----------');
+        core.info(JSON.stringify(existingPrComments, null, 2));
+        core.info(JSON.stringify(prComments, null, 2));
+        core.info('---------------------------------------------');
 
         process.exit(0);
 
@@ -180,7 +180,7 @@ class AiHelper {
 
     }
 
-    async reviewFile(file, commentsBody) {
+    async reviewFile(file) {
 
         let systemPrompt = `
             Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
@@ -201,12 +201,7 @@ class AiHelper {
             \`\`\`
             Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, 
             while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.            
-            -----
-            
-          ##WARNING! -  Here are previous comments on this file, do not repeat those comments:
-            \`\`\`
-            ${commentsBody}
-            \`\`\`
+            ----- 
             
             ## Focus area
             - Analyze the code diff to understand what changes have been made.

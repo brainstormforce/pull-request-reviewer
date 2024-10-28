@@ -370,7 +370,8 @@ class AiHelper {
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 core.info('Comment resolved status: ' + resolved.status);
                 if(resolved.status === 'Resolved') {
-                    await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
+                    core.info('Updating the comment as resolved');
+                    // await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }
             }
 

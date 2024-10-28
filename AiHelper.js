@@ -133,6 +133,10 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
 
+                core.info('----------- Comment Text -----------');
+                core.info(comment.body);
+                core.info('---------------------------------------------');
+
                 let tmpCommentText = comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
 
                 if( tmpCommentText ) {
@@ -155,7 +159,6 @@ class AiHelper {
 
             const response = await this.reviewFile(file);
             if (response.choices[0].message.content) {
-                core.info(JSON.stringify(JSON.parse(response.choices[0].message.content).comments, null, 2));
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
             }
 
@@ -234,12 +237,6 @@ class AiHelper {
             \`\`\`    
             
             `;
-
-
-
-        core.info('----------- System Prompt -----------');
-        core.info(systemPrompt);
-        core.info('---------------------------------------------');
 
         return this.openai.chat.completions.create({
             model: 'gpt-4o-mini',

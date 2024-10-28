@@ -382,7 +382,6 @@ class AiHelper {
             }
 
             const commentsBodyWhat = comments.map(comment =>  comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim());
-
             const response = await this.reviewFile(file, commentsBodyWhat);
             if (response.choices[0].message.content) {
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);

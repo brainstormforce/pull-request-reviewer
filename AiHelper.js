@@ -197,10 +197,14 @@ class AiHelper {
 
         }
 
-        // Code to Extract body from  existingPrComments
+
+
+
+
+
         existingPrComments = existingPrComments.map(comment => {
            return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
-        });
+        }).filter(Boolean);
 
 
         core.info('----------- OLD PR Comments -----------');

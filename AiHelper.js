@@ -259,6 +259,7 @@ class AiHelper {
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 if(resolved.status === 'Resolved') {
+                    core.info("Comment resolved, deleting.....");
                     await githubHelper.deleteComment(comment.id);
                 }
             }
@@ -279,7 +280,10 @@ class AiHelper {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
                 const {what, why, how, impact} = review_comment;
-                
+
+                core.info(`Checking if comment already exists: ${what}`);
+                core.info(`Existing comments: ${JSON.stringify(prevComments)}`);
+
                 if( this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping");
                     continue;

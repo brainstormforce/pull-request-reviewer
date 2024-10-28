@@ -86,6 +86,7 @@ class PullRequestReviewer {
 
             let isApproved = await aiHelper.checkApprovalStatus(existingPrComments);
 
+            core.info("PR Approval Status: " + isApproved);
             if( isApproved ) {
                 await githubHelper.createReview(pullRequestId, "APPROVE", "The code review is completed and approved by the reviewer.");
             }

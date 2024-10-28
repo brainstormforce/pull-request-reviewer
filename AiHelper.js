@@ -366,7 +366,7 @@ class AiHelper {
 
                 if( tmpCommentText ) {
                     tmpCommentText = 'What: ' + tmpCommentText + '\n\n';
-                    tmpCommentText = 'How: ' + comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim();
+                    tmpCommentText = tmpCommentText + 'How: ' + comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim();
                 } else {
                     tmpCommentText = comment.body;
                 }

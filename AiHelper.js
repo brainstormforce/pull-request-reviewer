@@ -318,11 +318,10 @@ class AiHelper {
             
             ## Focus area
             - Analyze the code diff to understand what changes have been made.
-            - Focus on areas such as code style consistency, efficiency, readability, and correctness.
+            - Focus on areas such as efficiency, security, performance, refactorization and correctness.
             - Identify any potential bugs or logic errors.
-            - Suggest improvements for variable naming, code structure, and documentation.
+            - Suggest improvements for variable naming, code structure.
             - Ensure adherence to best practices and relevant coding standards.
-            - Ignore extra spaces, tabs, indentation, or formatting issues.
             
             ## Steps
             
@@ -332,7 +331,8 @@ class AiHelper {
             4. **Logic & Bugs:** Identify logical errors or bugs and suggest corrections.
             5. **Best Practices:** Ensure the code follows best practices and relevant coding standards.
             6. **Naming & Structure:** Evaluate variable names and the overall structure for clarity and simplicity.
-            7. **Documentation:** Check for adequate comments and documentation explaining code functionality.
+            7. **Security:** Check for any security vulnerabilities and suggest improvements.
+            8. **Performance:** Analyze the code for performance bottlenecks and suggest enhancements.
             
             You can use PR title and description for more context.
             

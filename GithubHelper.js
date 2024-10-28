@@ -118,7 +118,7 @@ class GitHubHelper {
 
     async deleteComment(comment_id) {
         try {
-            await this.octokit.rest.issues.deleteReviewComment({
+            await this.octokit.rest.pulls.deleteReviewComment({
                 owner: this.owner,
                 repo: this.repo,
                 comment_id

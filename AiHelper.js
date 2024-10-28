@@ -281,15 +281,14 @@ class AiHelper {
                 const {commit_id, side, line, path, review_comment} = comment;
                 const {what, why, how, impact} = review_comment;
 
-                core.info(`Checking if comment already exists: ${what}`);
-                core.info(`Existing comments: ${JSON.stringify(existingPrComments)}`);
-
-                if( this.checkSimilarComment(existingPrComments, what ) ) {
+                if( existingPrComments.length > 0 && this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping");
                     continue;
                 }
 
                 await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
+
+                core.info("Comment added successfully");
             }
         }
 

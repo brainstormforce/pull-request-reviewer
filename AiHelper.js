@@ -27,16 +27,14 @@ class AiHelper {
             messages: [
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
-                    
                     Ensure that you carefully analyze the provided PR diff and the associated comment, considering whether any changes made address the concerns or requirements specified in the comment. 
-                    Pay attention to code modifications, added features, or explanations that align the PR with the comment's intentions.
-                    
+
                     # Steps
-                    
                     1. **Understand the Comment**: Read the comment to understand the concern or suggestion it provides. Identify the specific parts of the code or logic it pertains to.
                     2. **Analyze the PR Diff**: Examine the PR diff to identify changes that have been implemented. Look for specific lines, functions, or logic that relate to the comment.
                     3. **Compare with Comment**: Determine if the changes in the PR diff adequately address the comment. Consider if the solution aligns with the comment’s objectives.
                     4. **Conclusion**: Clearly state whether the comment is resolved or not.
+         
                 ` },
                 { role: "user", content: userPrompt },
             ],
@@ -48,7 +46,6 @@ class AiHelper {
                     "schema": {
                         "type": "object",
                         "properties": {
-
                             "status": {
                                 "type": "string",
                                 "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not.",

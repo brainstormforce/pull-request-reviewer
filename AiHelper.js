@@ -18,7 +18,6 @@ class AiHelper {
             ${commentText}
         `;
 
-        core.info('User Prompt: ' + userPrompt);
 
         const response = await this.openai.chat.completions.create({
             model: 'gpt-4o',
@@ -375,7 +374,9 @@ class AiHelper {
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 if(resolved.status === 'Resolved') {
-                    core.info('Updating the comment as resolved -------- ');
+                    core.info('----------- Comment Resolved -----------');
+                    core.info(tmpCommentText);
+                    core.info('Updating the comment as resolved -------->>> ');
                     await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }
             }

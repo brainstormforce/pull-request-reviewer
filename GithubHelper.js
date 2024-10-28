@@ -103,9 +103,6 @@ class GitHubHelper {
 
     async updateReviewComment(comment_id, body) {
         try {
-            core.info("---------------- Updating Review Comment ----------------");
-            core.info(`Body: ${body}`);
-            core.info("---------------------------------------------");
             await this.octokit.rest.pulls.createReplyForReviewComment({
                 owner: this.owner,
                 repo: this.repo,

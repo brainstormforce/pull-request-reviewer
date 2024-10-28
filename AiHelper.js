@@ -102,28 +102,50 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).task_id;
     }
 
-    async checkPrStatus(prevComments, currentComments) {
+    async checkSimilarComment(prevComments, currentComment) {
         const response = await this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
-                { role: "system", content: "Extract the task ID from the given PR title. Ex. SD-123, SRT-1234 etc. Generally PR title format is: <task-id>: pr tile ex. SRT-12: Task name" },
-                { role: "user", content: prTitle },
+                { role: "system", content:
+                        `
+                        Determine if a given string has a semantically similar string present within below array.
+                        
+                        Array: 
+                        
+                        ${JSON.stringify(prevComments)}
+                        
+                        # Steps
+
+                        1. **Input Analysis**:
+                           - Identify the given target string.
+                           - Collect the array of strings to compare against.
+                        
+                        2. **Semantic Similarity Check**:
+                           - Use a semantic similarity measure to compare the target string against each string in the array.
+                           - Consider linguistic similarities, synonyms, and contextual meanings in the comparison.
+                        
+                        3. **Result Determination**:
+                           - Determine if there is at least one string in the array that is semantically similar to the target string.
+                           - If found, identify and return the first or all semantically similar string(s).
+                        `
+                },
+                { role: "user", content: currentComment },
             ],
             response_format: {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "pr_title_task_id",
+                    "name": "is_semantically_similar",
                     "strict": true,
                     "schema": {
                         "type": "object",
                         "properties": {
-                            "task_id": {
-                                "type": "string",
-                                "description": "The extracted task ID from the pull request title."
+                            "is_similar": {
+                                "type": "boolean",
+                                "description": "true if semantically similar, else false"
                             }
                         },
                         "required": [
-                            "task_id"
+                            "is_similar"
                         ],
                         "additionalProperties": false
                     }
@@ -134,7 +156,7 @@ class AiHelper {
             max_tokens: 2000,
         });
 
-        return JSON.parse(response.choices[0].message.content).task_id;
+        return JSON.parse(response.choices[0].message.content).is_similar;
     }
 
     constructor(apiKey, githubHelper, prDetails) {
@@ -207,9 +229,6 @@ class AiHelper {
         }).filter(Boolean);
 
 
-        core.info('----------- OLD PR Comments -----------');
-        core.info(JSON.stringify(existingPrComments, null, 2));
-        core.info('---------------------------------------------');
 
 
 
@@ -219,6 +238,12 @@ class AiHelper {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
                 const {what, why, how, impact} = review_comment;
+                
+                if( this.checkSimilarComment(existingPrComments, what ) ) {
+                    core.info("Comment already exists, skipping");
+                    continue;
+                }
+                
                 await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }
@@ -373,38 +398,6 @@ class AiHelper {
         });
     }
 
-    async executeCodeReviewImpl(simpleChangedFiles) {
-        this.message = await this.openai.beta.threads.messages.create(
-            this.thread.id,
-            {
-                role: "user",
-                content: `
-                PR diff for review:
-                
-               \`\`\`
-                ${JSON.stringify(simpleChangedFiles)}
-                \`\`\`
-                `
-            }
-        );
-
-        this.run = await this.openai.beta.threads.runs.createAndPoll(
-            this.thread.id,
-            {
-                assistant_id: this.assistant.id,
-            }
-        );
-
-        await this.processRun();
-
-        const messages = await this.openai.beta.threads.messages.list(
-            this.thread.id
-        );
-
-        for (const message of messages.data.reverse()) {
-            console.log(`${message.role} > ${message.content[0].text.value}`);
-        }
-    }
 
 
 }

@@ -355,9 +355,6 @@ class AiHelper {
             // Get the comments in this file
             const comments = existingPrComments.filter(comment => comment.path === file.filename);
 
-            // Extarct all the comments body
-            const commentsBody = comments.map(comment => comment.body);
-
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
 
@@ -384,14 +381,15 @@ class AiHelper {
             const commentsBodyWhat = comments.map(comment =>  '\n- ' + comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim());
             const response = await this.reviewFile(file, commentsBodyWhat);
             if (response.choices[0].message.content) {
+                core.info(JSON.stringify(JSON.parse(response.choices[0].message.content).comments, null, 2));
                 prComments.push(JSON.parse(response.choices[0].message.content).comments);
             }
 
         }
 
-        core.info('----------- PR Comments -----------');
-        core.info(JSON.stringify(prComments, null, 2));
-        core.info('---------------------------------------------');
+        // core.info('----------- PR Comments -----------');
+        // core.info(JSON.stringify(prComments, null, 2));
+        // core.info('---------------------------------------------');
 
         process.exit(0);
 

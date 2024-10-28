@@ -245,6 +245,7 @@ class AiHelper {
                 }
 
                 core.info("Creating comment");
+
                 // await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }

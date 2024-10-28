@@ -460,19 +460,13 @@ class AiHelper {
             ${this.prDetails.prDescription}
             \`\`\`    
             
-             Here are previous comments on this file, do not reperat those comments:
-            \`\`\`
-            ${commentsBody.join('\n')}
-            \`\`\`  
             `;
 
-        // Check if commentsBody
-        if (commentsBody.length > 0) {
+        if( commentsBody ) {
             systemPrompt += `
-            
-            WARNING! - You have already given below comments, do not repeat those comments:
+            ##WARNING! -  Here are previous comments on this file, do not repeat those comments:
             \`\`\`
-            ${commentsBody.join('\n')}
+            ${commentsBody}
             \`\`\`
             `;
         }

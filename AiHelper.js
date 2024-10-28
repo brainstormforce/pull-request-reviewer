@@ -376,7 +376,7 @@ class AiHelper {
                 if(resolved.status === 'Resolved') {
                     core.info('----------- Comment Resolved -----------');
                     core.info(tmpCommentText);
-                    core.info('Updating the comment as resolved -------->>> ');
+                    core.info('---------------------------------------------');
                     await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }
             }

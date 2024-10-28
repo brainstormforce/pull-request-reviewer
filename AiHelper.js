@@ -7,8 +7,7 @@ class AiHelper {
     async checkCommentResolved(patch, commentText) {
 
         const userPrompt = `
-        
-                Focus on the **How** section to check whether it has been implemented.
+    
                 Code snippet:
                 
                 ${patch}
@@ -29,7 +28,8 @@ class AiHelper {
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
                     
-                    Ensure that you carefully analyze the provided PR diff and the associated comment, considering whether any changes made address the concerns or requirements specified in the comment. Pay attention to code modifications, added features, or explanations that align the PR with the comment's intentions.
+                    Ensure that you carefully analyze the provided PR diff and the associated comment, considering whether any changes made address the concerns or requirements specified in the comment. 
+                    Pay attention to code modifications, added features, or explanations that align the PR with the comment's intentions.
                     
                     # Steps
                     
@@ -429,6 +429,7 @@ class AiHelper {
             - Identify any potential bugs or logic errors.
             - Suggest improvements for variable naming, code structure, and documentation.
             - Ensure adherence to best practices and relevant coding standards.
+            - Ignore extra spaces, tabs, indentation, or formatting issues.
             
             ## Steps
             

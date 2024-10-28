@@ -125,7 +125,7 @@ class AiHelper {
         const prComments = [];
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
-            core.info('processing file: ' + file.filename);
+            core.info('\n\nprocessing file: ' + file.filename);
 
             // Get the comments in this file
             const comments = existingPrComments.filter(comment => comment.path === file.filename);
@@ -133,9 +133,10 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
 
-                core.info('----------- Comment Text -----------');
-                core.info(comment.body);
-                core.info('---------------------------------------------');
+                // Check if comment body starts with Resolved - Thank you
+                if(comment.body.startsWith('Resolved - Thank you')) {
+                    continue;
+                }
 
                 let tmpCommentText = comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
 
@@ -150,9 +151,6 @@ class AiHelper {
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 if(resolved.status === 'Resolved') {
-                    core.info('----------- Comment Resolved -----------');
-                    core.info(tmpCommentText);
-                    core.info('---------------------------------------------');
                     await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }
             }
@@ -166,6 +164,7 @@ class AiHelper {
 
         core.info('----------- PR Comments -----------');
         core.info(JSON.stringify(existingPrComments, null, 2));
+        core.info('---------------------------------------------');
         core.info(JSON.stringify(prComments, null, 2));
         core.info('---------------------------------------------');
 

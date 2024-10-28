@@ -43,15 +43,18 @@ class AiHelper {
             response_format: {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "comment_resolutions",
+                    "name": "comment_resolution_status",
                     "strict": true,
                     "schema": {
                         "type": "object",
                         "properties": {
                             "status": {
                                 "type": "string",
-                                "enum": ["Resolved", "Unresolved"],
                                 "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not.",
+                                "enum": [
+                                    "Resolved",
+                                    "Unresolved"
+                                ]
                             }
                         },
                         "required": [

@@ -48,6 +48,7 @@ class AiHelper {
                     "schema": {
                         "type": "object",
                         "properties": {
+
                             "status": {
                                 "type": "string",
                                 "description": "The status of the comment resolution. Indicate whether the comment has been resolved or not.",

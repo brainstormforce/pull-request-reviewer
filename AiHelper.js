@@ -23,7 +23,7 @@ class AiHelper {
 
 
         const response = await this.openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o',
             messages: [
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.

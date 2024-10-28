@@ -476,8 +476,13 @@ class AiHelper {
             `;
         }
 
+
+        core.info('----------- System Prompt -----------');
+        core.info(systemPrompt);
+        core.info('---------------------------------------------');
+
         return this.openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini',
             messages: [
                 {role: "system", content: systemPrompt},
                 {role: "user", content: `${JSON.stringify(file)}`},

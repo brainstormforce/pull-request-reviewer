@@ -282,7 +282,7 @@ class AiHelper {
                 const {what, why, how, impact} = review_comment;
 
                 core.info(`Checking if comment already exists: ${what}`);
-                core.info(`Existing comments: ${JSON.stringify(prevComments)}`);
+                core.info(`Existing comments: ${JSON.stringify(existingPrComments)}`);
 
                 if( this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping");

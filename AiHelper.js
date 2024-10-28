@@ -7,19 +7,16 @@ class AiHelper {
     async checkCommentResolved(patch, commentText) {
 
         const userPrompt = `
-    
-                Code snippet:
-                
-                ${patch}
-                
-                Review Comment: 
-                
-                ${commentText}
-                `;
-
-        core.info('----------- User Prompt -----------');
-        core.info('userPrompt: ' + userPrompt);
-        core.info('---------------------------------------------');
+            Code snippet:
+            
+            \`\`\`
+            ${patch}
+            \`\`\`
+            
+            Review Comment: 
+            
+            ${commentText}
+        `;
 
 
         const response = await this.openai.chat.completions.create({
@@ -369,10 +366,9 @@ class AiHelper {
                 if (!tmpCommentText) continue;
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
-                core.info('Comment resolved status: ' + resolved.status);
                 if(resolved.status === 'Resolved') {
-                    core.info('Updating the comment as resolved');
-                    // await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
+                    core.info('Updating the comment as resolved -------- ');
+                    await githubHelper.updateReviewComment(comment.id, 'Resolved - Thank you :thumbsup:');
                 }
             }
 
@@ -397,7 +393,6 @@ class AiHelper {
                 await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
             }
         }
-
 
 
     }
@@ -465,7 +460,7 @@ class AiHelper {
         if (commentsBody.length > 0) {
             systemPrompt += `
             
-            Here are previous comments on this file, do not suggest those comments:
+            WARNING! - You have already given below comments, do not repeat those comments:
             \`\`\`
             ${commentsBody.join('\n')}
             \`\`\`

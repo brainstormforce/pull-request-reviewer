@@ -291,10 +291,6 @@ class AiHelper {
                 core.info("Comment added successfully");
             }
         }
-
-        process.exit(0);
-
-
     }
 
     async reviewFile(file) {

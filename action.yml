@@ -31,7 +31,7 @@ inputs:
   EXCLUDE_PATHS:
     description: 'Paths to exclude from review (comma-separated, e.g., "test/,docs/")'
     required: false
-    default: "node_modules/,vendor/"
+    default: "node_modules/,vendor/,assets/css/minified/,assets/js/minified/"
 runs:
   using: "node20"
   main: "dist/bundle.js"

@@ -22,7 +22,7 @@ The BSF AI Code Reviewer is an AI-powered code review system that leverages Open
 3. Create a `.github/workflows/bsf-pr-review.yml` file in your repository and add the following content:
 
 ```yaml
-name: BSF AI Code Reviewer
+name: BSF Code Reviewer
 
 on:
   pull_request:
@@ -38,12 +38,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: AI Code Reviewer
-        uses: brainstormforce/pull-request-reviewer@master
+        uses: brainstormforce/pull-request-reviewer@master-v2.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
-          OPENAI_API_MODEL: "gpt-4o-mini"
-          exclude: "**/*.json, **/*.md"
+          EXCLUDE_EXTENSIONS: "md, yml, lock"
+          INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
+          EXCLUDE_PATHS: "node_modules/,vendor/"

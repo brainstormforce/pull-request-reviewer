@@ -15,15 +15,28 @@ class PullRequestReviewer {
         this.baseUrl = "https://api.github.com";
     }
 
+
+
     async reviewPullRequest(pullRequestId) {
 
         const owner = context.repo.owner;
         const repo = context.repo.repo;
-        const includeExtensions = core.getInput('INCLUDE_EXTENSIONS') || ["php", "js", "jsx", "ts", "tsx", "css", "scss", "html", "json"];
-        const excludeExtensions = core.getInput('EXCLUDE_EXTENSIONS') || [];
-        const includePaths = core.getInput('INCLUDE_PATHS') || [];
-        const excludePaths = core.getInput('EXCLUDE_PATHS') || [];
+
+        const stringToArray = (inputString, delimiter = ',') =>
+            inputString.split(delimiter).map(item => item.trim());
+
+
+        const includeExtensions = stringToArray(core.getInput('INCLUDE_EXTENSIONS'));
+        const excludeExtensions = stringToArray(core.getInput('EXCLUDE_EXTENSIONS') );
+        const includePaths = stringToArray( core.getInput('INCLUDE_PATHS') );
+        const excludePaths = stringToArray( core.getInput('EXCLUDE_PATHS') );
         const githubToken = core.getInput('GITHUB_TOKEN');
+
+
+        core.info('Include Extensions: ' + includeExtensions);
+        core.info('Exclude Extensions: ' + excludeExtensions);
+        core.info('Include Paths: ' + includePaths);
+        core.info('Exclude Paths: ' + excludePaths);
 
 
         const githubHelper = new GithubHelper(owner, repo, pullRequestId,  githubToken);
@@ -88,7 +101,10 @@ class PullRequestReviewer {
 
             core.info("PR Approval Status: " + isApproved);
             if( isApproved ) {
-                await githubHelper.createReview(pullRequestId, "APPROVE", "Great job! ✅ The PR looks solid with no security or performance issues. Approved and ready to merge!\n");
+                await githubHelper.createReview(pullRequestId, "APPROVE", "\n" +
+                    "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
+                    "\n" +
+                    "Please make sure to resolve any remaining comments. Approved and ready to merge!");
             }
 
         } catch (error) {

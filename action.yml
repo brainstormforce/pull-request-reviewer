@@ -20,10 +20,18 @@ inputs:
     description: "OpenAI API model."
     required: false
     default: "gpt-4"
-  exclude:
-    description: "Exclude files from diff analysis using glob patterns."
+  INCLUDE_EXTENSIONS:
+    description: 'File extensions to include in the review (comma-separated, e.g., ".py,.js,.html")'
     required: false
-    default: ""
+    default: "php, js, jsx, ts, tsx, css, scss, html, json"
+  EXCLUDE_EXTENSIONS:
+    description: 'File extensions to exclude from the review (comma-separated)'
+    required: false
+    default: "md, yml, lock"
+  EXCLUDE_PATHS:
+    description: 'Paths to exclude from review (comma-separated, e.g., "test/,docs/")'
+    required: false
+    default: "node_modules/,vendor/"
 runs:
   using: "node20"
   main: "dist/bundle.js"

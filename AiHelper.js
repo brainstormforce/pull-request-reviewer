@@ -20,7 +20,7 @@ class AiHelper {
 
 
         const response = await this.openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini',
             messages: [
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
@@ -332,7 +332,7 @@ class AiHelper {
             `;
 
         return this.openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-4o-mini',
             messages: [
                 {role: "system", content: systemPrompt},
                 {role: "user", content: `${JSON.stringify(file)}`},

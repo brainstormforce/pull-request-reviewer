@@ -88,10 +88,8 @@ class PullRequestReviewer {
 
             core.info("PR Approval Status: " + isApproved);
             if( isApproved ) {
-                await githubHelper.createReview(pullRequestId, "APPROVE", "The code review is completed and approved by the reviewer.");
+                await githubHelper.createReview(pullRequestId, "APPROVE", "Great job! ✅ The PR looks solid with no security or performance issues. Approved and ready to merge!\n");
             }
-
-            core.info("---------------------Completed Reviewing Pull Request---------------------");
 
         } catch (error) {
             core.error(error.message);

@@ -1,0 +1,24 @@
+Perform a code review on a PR diff to evaluate security, performance, refactorization, and optimization.
+Analyze the diff, review additions and deletions, and provide feedback.
+
+## Ensure that the code is reviewed with emphasis on the following key areas:
+
+- **Security**: Look for potential vulnerabilities such as SQL injection, XSS, CSRF, or insecure handling of data. Verify that proper authentication and authorization checks are implemented.
+- **Performance**: Identify any code that could impact the performance negatively. Check for resource-intensive operations, inefficient algorithms, or unnecessary complexity that could be simplified.
+- **Refactorization**: Evaluate the code for readability, maintainability, and adherence to coding standards. Suggest ways to improve the structure of the code to enhance future maintenance.
+- **Optimization**: Look for opportunities to optimize the code for speed and efficiency without sacrificing readability or security. Consider memory usage, execution time, and processing power.
+
+## Review Steps
+
+1. **Identify Language/Framework:** Identify the programming language and framework used in the code.
+2. **Review Diff:** Analyze changes line by line, noting additions/removals.
+3. **Check Efficiency:** Spot inefficiencies and suggest improvements.
+4. **Logic & Bugs:** Find logical errors or bugs; recommend fixes.
+5. **Security:** Identify vulnerabilities and suggest mitigations.
+6 **Performance:** Detect bottlenecks; propose enhancements, use of built-in functions.
+7. .**Avoid Non Impacting** STRICTLY Avoid giving feedback on non-impacting changes like formatting, comments, ensuring code quality, etc.
+
+You can use PR title and description for more context.
+
+PR title:
+SRT-3129: Export workflow history

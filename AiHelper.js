@@ -24,8 +24,8 @@ class AiHelper {
             messages: [
                 { role: "system", content: `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
-                    Ensure that you carefully analyze the provided PR diff and the associated comment, considering whether any changes made address the concerns or requirements specified in the comment. 
-
+                    Strictly check the code changes to ensure that the comment has been addressed effectively.
+                    
                     # Steps
                     1. **Understand the Comment**: Read the comment to understand the concern or suggestion it provides. Identify the specific parts of the code or logic it pertains to.
                     2. **Analyze the PR Diff**: Examine the PR diff to identify changes that have been implemented. Look for specific lines, functions, or logic that relate to the comment.
@@ -177,15 +177,21 @@ class AiHelper {
             model: 'gpt-4o-mini',
             messages: [
                 { role: "system", content: `
-                    Determine the nature of a Pull Request (PR) from given comments and identify doable tasks based on their importance. If the assessment is favorable, approve the PR.
+                    ### PR Approval Criteria Based on Comments
+                    
+                    Review comments on a PR to decide on approval.
+                    
+                    #### Guidelines:
+                    - **Not Approved**: If comments request changes for security or performance issues.
+                    - **Approved**: If comments only ask for verification or measurements.
+                    
+                    #### Steps:
+                    1. **Review Comments**: Read through PR comments.
+                    2. **Identify Concerns**: Note any mentions of security or performance.
+                    3. **Assess Requests**:
+                       - Changes for security/performance → **Not Approved**
+                       - Only verification/measurements → **Approved**
 
-                    # Steps
-                    1. **Analyze Comments**: Evaluate the comments provided on the PR to understand the context and the nature of changes proposed.
-                    2. **Identify Tasks**: Break down the tasks mentioned in the comments, determine their importance, and prioritize them accordingly.
-                    3. **Approve Decision**: Based on the evaluation of comments and identified tasks, decide if the PR should be approved.
-        
-                    # Notes
-                    - If any task is critical and unresolved, the approval status should be "Not Approved."
               
                 ` },
                 { role: "user", content: userPrompt },
@@ -200,7 +206,7 @@ class AiHelper {
                         "properties": {
                             "is_approved": {
                                 "type": "boolean",
-                                "description": "true if approved, else false"
+                                "description": "true if PR is approved, else false"
                             }
                         },
                         "required": [
@@ -233,7 +239,7 @@ class AiHelper {
         const prComments = [];
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
-            core.info('\n\nprocessing file: ' + file.filename);
+            core.info('\n\nProcessing file: ' + file.filename);
 
             // Get the comments in this file
             const comments = existingPrComments.filter(comment => comment.path === file.filename);
@@ -241,16 +247,11 @@ class AiHelper {
             // Loop to each comment to check if it is resolved
             for (const comment of comments) {
 
-                // Check if comment body starts with Resolved - Thank you
-                if(comment.body.startsWith('Resolved - Thank you')) {
-                    continue;
-                }
-
                 let tmpCommentText = comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
 
                 if( tmpCommentText ) {
                     tmpCommentText = 'What: ' + tmpCommentText + '\n\n';
-                    tmpCommentText = tmpCommentText + 'How: ' + comment.body.match(/How:(.*)(?=Impact:)/s)?.[1]?.trim();
+                    tmpCommentText = tmpCommentText + 'How: ' + comment.body.match(/How:(.*)/s)?.[1]?.trim();
                 } else {
                     tmpCommentText = comment.body;
                 }
@@ -279,16 +280,16 @@ class AiHelper {
         for (const comments of prComments) {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
-                const {what, why, how, impact} = review_comment;
+                const {what, why, how} = review_comment;
 
                 if( existingPrComments.length > 0 && this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping");
                     continue;
                 }
 
-                await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n\n**Impact:** ${impact}\n`);
+                await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n`);
 
-                core.info("Comment added successfully");
+                core.info("New comment added");
             }
         }
     }
@@ -296,55 +297,37 @@ class AiHelper {
     async reviewFile(file) {
 
         let systemPrompt = `
-            Do the code review of the given pull request diff which is incomplete code fragment meaning it is just a map of added and removed lines in the file.
-            So analyse what is removed and what is added and provide the review comments.
-                        
-            First, understand the Diff format to improve your review process. 
-            Focus on identifying which code has been removed and what has been newly added, and use this context exclusively for your review.     -----
-            \`\`\`diff
-            diff --git a/loader.php b/loader.php
-            index ff652b5..f271a52 100644
-            --- a/loader.php
-            +++ b/loader.php
-            @@ -14,7 +14,7 @@ jobs:
-            -        a = a + 1
-            +        a++
-                       c = a + b
-            
-            \`\`\`
-            Meaning of this diff is - The diff replaces a = a + 1 with a++ for brevity, 
-            while the notation @@ -14,7 +14,7 @@ shows that this is the only change within a 7-line block starting at line 14.            
-            ----- 
-            
-            ## Focus area
-            - Analyze the code diff to understand what changes have been made.
-            - Focus on areas such as efficiency, security, performance, refactorization and correctness.
-            - Identify any potential bugs or logic errors.
-            - Suggest improvements for variable naming, code structure.
-            - Ensure adherence to best practices and relevant coding standards.
-            
-            ## Steps
-            
-            1. **Examine the Diff:** Start by reviewing the code changes in the pull request diff.
-            2. **Code Quality:** Check for readability, consistent styling, and clear syntax.
-            3. **Efficiency:** Look for any inefficient algorithms or patterns and recommend optimizations.
-            4. **Logic & Bugs:** Identify logical errors or bugs and suggest corrections.
-            5. **Best Practices:** Ensure the code follows best practices and relevant coding standards.
-            6. **Naming & Structure:** Evaluate variable names and the overall structure for clarity and simplicity.
-            7. **Security:** Check for any security vulnerabilities and suggest improvements.
-            8. **Performance:** Analyze the code for performance bottlenecks and suggest enhancements.
-            
-            You can use PR title and description for more context.
-            
-            PR title:
-            \`\`\`
-            ${this.prDetails.prTitle}
-            \`\`\`
-            
-            PR description:
-            \`\`\`
-            ${this.prDetails.prDescription}
-            \`\`\`    
+        Perform a code review on a PR diff to evaluate security, performance, refactorization, and optimization.
+        Analyze the diff, review additions and deletions, and provide feedback.
+        
+        ## Ensure that the code is reviewed with emphasis on the following key areas:
+        
+        - **Security**: Look for potential vulnerabilities such as SQL injection, XSS, CSRF, or insecure handling of data. Verify that proper authentication and authorization checks are implemented.
+        - **Performance**: Identify any code that could impact the performance negatively. Check for resource-intensive operations, inefficient algorithms, or unnecessary complexity that could be simplified.
+        - **Refactorization**: Evaluate the code for readability, maintainability, and adherence to coding standards. Suggest ways to improve the structure of the code to enhance future maintenance.
+        - **Optimization**: Look for opportunities to optimize the code for speed and efficiency without sacrificing readability or security. Consider memory usage, execution time, and processing power.
+        
+        ## Review Steps
+        
+        1. **Identify Language/Framework:** Identify the programming language and framework used in the code.
+        2. **Review Diff:** Analyze changes line by line, noting additions/removals.
+        3. **Check Efficiency:** Spot inefficiencies and suggest improvements.
+        4. **Logic & Bugs:** Find logical errors or bugs; recommend fixes.
+        5. **Security:** Identify vulnerabilities and suggest mitigations.
+        6 **Performance:** Detect bottlenecks; propose enhancements, use of built-in functions.
+        7. .**Avoid Non Impacting** STRICTLY Avoid giving feedback on non-impacting changes like formatting, comments, ensuring code quality, etc.
+        
+        You can use PR title and description for more context.
+        
+        #PR title:
+        \`\`\`
+        ${this.prDetails.prTitle}
+        \`\`\`
+        
+        #PR description:
+        \`\`\`
+        ${this.prDetails.prDescription}
+        \`\`\`    
             
             `;
 
@@ -364,7 +347,7 @@ class AiHelper {
                         "properties": {
                             "comments": {
                                 "type": "array",
-                                "description": "A collection of review comments for specific code snippets.",
+                                "description": "A list of review comments that the reviewer has left on the code snippets in the pull request. Each comment should be specific, actionable, and focused on a single issue. It should also consider the developer’s perspective and provide constructive feedback that helps them understand the problem and improve their code quality.",
                                 "items": {
                                     "type": "object",
                                     "properties": {
@@ -386,30 +369,25 @@ class AiHelper {
                                         },
                                         "review_comment": {
                                             "type": "object",
-                                            "description": "The review comment detailing the object, why it is commented, and how it can be improved.",
+                                            "description": "The review comment that the reviewer has left on the code snippet. It should be specific, actionable, and focused on a single issue. It should also consider the developer’s perspective and provide constructive feedback that helps them understand the problem and improve their code quality.",
                                             "properties": {
                                                 "what": {
                                                     "type": "string",
-                                                    "description": "Describes the specific issue by quoting the specific code or area in the code that needs attention. It should clearly state what the reviewer is pointing out, whether it’s a security concern, performance bottleneck, naming inconsistency, or anything else that requires a change."
+                                                    "description": "Describes the issue that the reviewer has identified in the code snippet. It should be specific, actionable, and focused on a single problem. It should also consider the developer’s perspective and provide constructive feedback that helps them understand the issue and improve their code quality."
                                                 },
                                                 "why": {
                                                     "type": "string",
-                                                    "description": "Why the change is recommended. It clarifies the potential issue or downside of the current implementation, giving the developer insight into the risks, limitations, or best practices they may have overlooked."
+                                                    "description": "Explains why the issue is important and what the reviewer hopes to achieve by addressing it. It should provide context on the problem and explain how it aligns with the project’s goals, coding standards, or best practices. It should also consider the developer’s perspective and explain the benefits of making the change."
                                                 },
                                                 "how": {
                                                     "type": "string",
-                                                    "description": "provides guidance or a specific example on how to address the issue. Generally contains the refactored code snippet with may include a brief explanation, or reference to a best practice that can help the developer implement the suggested change effectively."
-                                                },
-                                                "impact": {
-                                                    "type": "string",
-                                                    "description": "Explains the positive outcomes or benefits of making the suggested change, such as improved security, performance, readability, or maintainability. It can also highlight potential negative impacts if the change isn’t made."
+                                                    "description": "Provides a clear and concise explanation of how to fix the issue. It can include code snippets, links to documentation, or other resources that help the developer understand the problem and implement the suggested change. It should be detailed enough to guide the developer through the process but not so prescriptive that it stifles creativity or learning. It should also consider the developer’s level of expertise and provide additional context or explanations as needed."
                                                 }
                                             },
                                             "required": [
                                                 "what",
                                                 "why",
-                                                "how",
-                                                "impact"
+                                                "how"
                                             ],
                                             "additionalProperties": false
                                         }

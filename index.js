@@ -23,15 +23,7 @@ class PullRequestReviewer {
         const excludePaths = stringToArray(core.getInput('EXCLUDE_PATHS'));
         const githubToken = core.getInput('GITHUB_TOKEN');
 
-
-        core.info('Include Extensions: ' + includeExtensions);
-        core.info('Exclude Extensions: ' + excludeExtensions);
-        core.info('Include Paths: ' + includePaths);
-        core.info('Exclude Paths: ' + excludePaths);
-
-
         const githubHelper = new GithubHelper(owner, repo, pullRequestId, githubToken);
-
 
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {

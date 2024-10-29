@@ -4,6 +4,11 @@ const core = require("@actions/core");
 class AiHelper {
     prDetails;
 
+    constructor(apiKey, prDetails) {
+        this.openai = new OpenAI({ apiKey });
+        this.prDetails = prDetails;
+    }
+
     async checkCommentResolved(patch, commentText) {
 
         const userPrompt = `
@@ -159,13 +164,6 @@ class AiHelper {
         return JSON.parse(response.choices[0].message.content).is_similar;
     }
 
-    constructor(apiKey, githubHelper, prDetails) {
-        this.openai = new OpenAI({ apiKey });
-        this.githubHelper = githubHelper;
-        this.prDetails = prDetails;
-
-        this.fileCache = {};
-    }
     async checkApprovalStatus(prComments) {
         const userPrompt = `
                 
@@ -273,7 +271,7 @@ class AiHelper {
         }
 
         existingPrComments = existingPrComments.map(comment => {
-           return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
+            return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
         }).filter(Boolean);
 
         // Loop on the prComments to add the comments to the PR

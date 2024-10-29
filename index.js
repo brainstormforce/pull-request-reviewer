@@ -8,15 +8,6 @@ const GithubHelper = require("./GithubHelper");
 
 class PullRequestReviewer {
 
-    constructor(githubToken, openaiApiKey, model) {
-        this.octokit = new Octokit({auth: githubToken});
-        this.openaiApiKey = openaiApiKey;
-        this.model = model;
-        this.baseUrl = "https://api.github.com";
-    }
-
-
-
     async reviewPullRequest(pullRequestId) {
 
         const owner = context.repo.owner;
@@ -27,9 +18,9 @@ class PullRequestReviewer {
 
 
         const includeExtensions = stringToArray(core.getInput('INCLUDE_EXTENSIONS'));
-        const excludeExtensions = stringToArray(core.getInput('EXCLUDE_EXTENSIONS') );
-        const includePaths = stringToArray( core.getInput('INCLUDE_PATHS') );
-        const excludePaths = stringToArray( core.getInput('EXCLUDE_PATHS') );
+        const excludeExtensions = stringToArray(core.getInput('EXCLUDE_EXTENSIONS'));
+        const includePaths = stringToArray(core.getInput('INCLUDE_PATHS'));
+        const excludePaths = stringToArray(core.getInput('EXCLUDE_PATHS'));
         const githubToken = core.getInput('GITHUB_TOKEN');
 
 
@@ -39,7 +30,7 @@ class PullRequestReviewer {
         core.info('Exclude Paths: ' + excludePaths);
 
 
-        const githubHelper = new GithubHelper(owner, repo, pullRequestId,  githubToken);
+        const githubHelper = new GithubHelper(owner, repo, pullRequestId, githubToken);
 
 
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
@@ -82,16 +73,16 @@ class PullRequestReviewer {
             /**
              * Initialize AI Helper
              */
-            const aiHelper = new AiHelper(openaiApiKey, githubHelper, prDetails);
+            const aiHelper = new AiHelper(openaiApiKey, prDetails);
 
-            let prComments = await githubHelper.getPullRequestComments( pullRequestId);
+            let prComments = await githubHelper.getPullRequestComments(pullRequestId);
 
             await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
 
             /**
              * Get the PR comments again after the review to check if the reviewer has approved the PR.
              */
-            prComments = await githubHelper.getPullRequestComments( pullRequestId);
+            prComments = await githubHelper.getPullRequestComments(pullRequestId);
 
             let existingPrComments = prComments.map(comment => {
                 return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
@@ -100,7 +91,7 @@ class PullRequestReviewer {
             let isApproved = await aiHelper.checkApprovalStatus(existingPrComments);
 
             core.info("PR Approval Status: " + isApproved);
-            if( isApproved ) {
+            if (isApproved) {
                 await githubHelper.createReview(pullRequestId, "APPROVE", "\n" +
                     "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
                     "\n" +
@@ -149,12 +140,9 @@ class PullRequestReviewer {
     }
 }
 
-// Usage
-const githubToken = core.getInput('GITHUB_TOKEN');
 const openaiApiKey = core.getInput('OPENAI_API_KEY');
-const model = core.getInput('OPENAI_API_MODEL') || 'gpt-4o-mini';
 
-const reviewer = new PullRequestReviewer(githubToken, openaiApiKey, model);
+const reviewer = new PullRequestReviewer();
 
 try {
     reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context

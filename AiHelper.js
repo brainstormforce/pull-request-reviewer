@@ -260,6 +260,11 @@ class AiHelper {
                 if(resolved.status === 'Resolved') {
                     core.info("Comment resolved, deleting!");
                     await githubHelper.deleteComment(comment.id);
+                    // check comment has in_reply_to_id and delete it
+                    if(comment.in_reply_to_id) {
+                        core.info("Deleting in_reply_to_id comment!");
+                        await githubHelper.deleteComment(comment.in_reply_to_id);
+                    }
                 }
             }
 

@@ -87,7 +87,7 @@ class PullRequestReviewer {
                 await githubHelper.createReview(pullRequestId, "APPROVE", "\n" +
                     "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
                     "\n" +
-                    "Please make sure to resolve any remaining comments. Approved and ready to merge!");
+                    "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
             }
 
         } catch (error) {

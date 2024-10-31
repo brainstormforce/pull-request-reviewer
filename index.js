@@ -137,10 +137,6 @@ const openaiApiKey = core.getInput('OPENAI_API_KEY');
 
 const reviewer = new PullRequestReviewer();
 
-
-core.info(JSON.stringify(context, null, 4));
-process.exit(0);
-
 try {
     reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
         .catch(error => console.error(error));

@@ -46,6 +46,10 @@ class PullRequestReviewer {
              */
             const pullRequestData = await githubHelper.getPullRequest(pullRequestId);
 
+            if( pullRequestData.review_comments > 0) {
+                core.info("Pull Request has review comments. Skipping the review.");
+                process.exit(0);
+            }
 
             core.info(JSON.stringify(pullRequestData, null, 2));
             process.exit(0);

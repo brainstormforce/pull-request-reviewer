@@ -138,7 +138,7 @@ const openaiApiKey = core.getInput('OPENAI_API_KEY');
 const reviewer = new PullRequestReviewer();
 
 
-core.info(context);
+core.info(JSON.stringify(context, null, 4));
 process.exit(0);
 
 try {

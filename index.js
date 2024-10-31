@@ -127,6 +127,7 @@ class PullRequestReviewer {
 
         core.info('---------------------Started Reviewing Pull Request---------------------');
 
+
         const result = await this.reviewPullRequest(pullRequestId);
         console.log(result);
     }
@@ -135,6 +136,10 @@ class PullRequestReviewer {
 const openaiApiKey = core.getInput('OPENAI_API_KEY');
 
 const reviewer = new PullRequestReviewer();
+
+
+core.info(context);
+process.exit(0);
 
 try {
     reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context

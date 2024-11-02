@@ -37,7 +37,7 @@ class PullRequestReviewer {
         };
 
         const checkApprovalStatus = async () => {
-            core.info('Checking PR Approval Status...');
+
             const prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
             let existingPrComments = prComments.map(comment => {
                 return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
@@ -94,7 +94,7 @@ class PullRequestReviewer {
     }
 
     async checkShortCode() {
-        core.info("Checking for Short Codes in the PR Description...");
+
         const prData = await this.githubHelper.getPullRequest(this.pull_number);
         const prDiff = await this.githubHelper.getPullRequestDiff(this.pull_number);
 
@@ -104,15 +104,14 @@ class PullRequestReviewer {
         const shortCodeRegex = /(\[BSF-PR-SUMMARY\])/g;
         const shortCodes = prDescription.match(shortCodeRegex);
 
-        core.info('Short Codes: ' + shortCodes);
         if (shortCodes) {
             const summary = await this.aiHelper.getPrSummary(prTitle, prDiff);
             const newPrDescription = prDescription.replace(shortCodeRegex, summary);
             await this.githubHelper.updatePullRequestBody(newPrDescription);
 
-            core.info("PR Summary added to the PR Description.");
+            core.info("PR Summary added to the PR Description 🎉");
         } else {
-            core.info('No Short Codes found in the PR description.');
+            core.info('No shortcode! Skipping the process.');
         }
     }
 }
@@ -128,15 +127,6 @@ async function main() {
 
         const githubHelper = new GithubHelper(owner, repo, pull_number, githubToken);
         const pullRequestData = await githubHelper.getPullRequest(pull_number);
-
-
-        core.info('Owner: ' + owner);
-        core.info('Repo: ' + repo);
-        core.info('Pull Number: ' + pull_number);
-        core.info('Github Token: ' + githubToken);
-
-
-        core.info('Pull Request Data: ' + JSON.stringify(pullRequestData));
 
         const prDetails = {
             prTitle: pullRequestData.title,

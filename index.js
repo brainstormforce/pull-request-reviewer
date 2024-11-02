@@ -8,10 +8,23 @@ const GithubHelper = require("./GithubHelper");
 
 class PullRequestReviewer {
 
-    async reviewPullRequest(pullRequestId) {
+    /**
+     * Initialize the PullRequestReviewer.
+     * @param owner
+     * @param repo
+     * @param pull_number
+     * @param githubHelper
+     */
+    constructor(owner, repo, pull_number, githubHelper, aiHelper) {
+        this.owner = owner;
+        this.repo = repo;
+        this.pull_number = pull_number;
+        this.githubHelper = githubHelper;
+        this.aiHelper = aiHelper;
+    }
 
-        const owner = context.repo.owner;
-        const repo = context.repo.repo;
+
+    async reviewPullRequest(pullRequestData) {
 
         const stringToArray = (inputString, delimiter = ',') =>
             inputString.split(delimiter).map(item => item.trim());
@@ -21,9 +34,6 @@ class PullRequestReviewer {
         const excludeExtensions = stringToArray(core.getInput('EXCLUDE_EXTENSIONS'));
         const includePaths = stringToArray(core.getInput('INCLUDE_PATHS'));
         const excludePaths = stringToArray(core.getInput('EXCLUDE_PATHS'));
-        const githubToken = core.getInput('GITHUB_TOKEN');
-
-        const githubHelper = new GithubHelper(owner, repo, pullRequestId, githubToken);
 
         const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
             const isFileToReview = (filename) => {
@@ -39,65 +49,61 @@ class PullRequestReviewer {
         };
 
 
-        try {
+        const checkApprovalStatus = async () => {
+
+            core.info('Checking PR Approval Status...');
 
             /**
-             * Get the pull request data
+             * Get the PR comments again after the review to check if the reviewer has approved the PR.
              */
-            const pullRequestData = await githubHelper.getPullRequest(pullRequestId);
+            const prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
 
-            if( pullRequestData.review_comments > 0) {
+            let existingPrComments = prComments.map(comment => {
+                return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
+            }).filter(Boolean);
+
+            let isApproved = await this.aiHelper.checkApprovalStatus(existingPrComments);
+
+            core.info("PR Approval Status: " + isApproved);
+
+            if (isApproved) {
+                await this.githubHelper.createReview(this.pull_number, "APPROVE", "\n" +
+                    "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
+                    "\n" +
+                    "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
+            }
+
+        }
+
+        try {
+
+
+            if (pullRequestData.review_comments > 0) {
                 core.info("Pull Request has review comments. Skipping the review.");
+                await checkApprovalStatus();
                 process.exit(0);
             }
 
-            core.info(JSON.stringify(pullRequestData, null, 2));
-            process.exit(0);
-
 
             // List all PR files
-            const changedFiles = await githubHelper.listFiles(pullRequestId);
+            const changedFiles = await this.githubHelper.listFiles(this.pull_number);
 
             /**
              * Filter files based on the extensions and paths provided.
              */
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
 
-           /**
-             * Prepare PR details to be used in AI Helper.
-             */
-            const prDetails = {
-                prTitle: pullRequestData.title,
-                prDescription: pullRequestData.body,
-            };
 
             /**
              * Initialize AI Helper
              */
-            const aiHelper = new AiHelper(openaiApiKey, prDetails);
 
-            let prComments = await githubHelper.getPullRequestComments(pullRequestId);
 
-            await aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
+            let prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
 
-            /**
-             * Get the PR comments again after the review to check if the reviewer has approved the PR.
-             */
-            prComments = await githubHelper.getPullRequestComments(pullRequestId);
+            await this.aiHelper.executeCodeReview(reviewableFiles, prComments, githubHelper);
 
-            let existingPrComments = prComments.map(comment => {
-                return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
-            }).filter(Boolean);
-
-            let isApproved = await aiHelper.checkApprovalStatus(existingPrComments);
-
-            core.info("PR Approval Status: " + isApproved);
-            if (isApproved) {
-                await githubHelper.createReview(pullRequestId, "APPROVE", "\n" +
-                    "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
-                    "\n" +
-                    "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
-            }
+            await checkApprovalStatus();
 
         } catch (error) {
             core.error(error.message);
@@ -132,23 +138,74 @@ class PullRequestReviewer {
     }
 
 
-    async run(pullRequestId) {
+    async checkShortCode() {
 
-        core.info('---------------------Started Reviewing Pull Request---------------------');
+        const prData = await this.githubHelper.getPullRequest(this.pull_number);
+        const prDiff = await this.githubHelper.getPullRequestDiff(this.pull_number);
 
+        const prDescription = prData.body;
+        const prTitle = prData.title;
 
-        const result = await this.reviewPullRequest(pullRequestId);
-        console.log(result);
+        // check if body contains [BSF-PR-SUMMARY] shortcode
+        const shortCodeRegex = /(\[BSF-PR-SUMMARY\])/g;
+
+        const shortCodes = prDescription.match(shortCodeRegex);
+
+        if (shortCodes) {
+
+            const summary = await this.aiHelper.getPrSummary(prTitle, prDiff);
+            const newPrDescription = prDescription.replace(shortCodeRegex, summary);
+            await this.githubHelper.updatePullRequestBody(newPrDescription);
+
+            core.info("PR Summary added to the PR Description.");
+
+        } else {
+            core.info('No Short Codes found in the PR description.');
+        }
     }
 }
 
-const openaiApiKey = core.getInput('OPENAI_API_KEY');
-
-const reviewer = new PullRequestReviewer();
 
 try {
-    reviewer.run(context.payload.pull_request.number) // Get the pull request ID from the context
-        .catch(error => console.error(error));
+
+    const openaiApiKey = core.getInput('OPENAI_API_KEY');
+    const actionContext = core.getInput('ACTION_CONTEXT');
+    const owner = context.repo.owner;
+    const repo = context.repo.repo;
+    const pull_number = context.payload.pull_request.number;
+    const githubToken = core.getInput('GITHUB_TOKEN');
+
+    const githubHelper = new GithubHelper(owner, repo, pull_number, githubToken);
+
+    /**
+     * Get the pull request data
+     */
+    const pullRequestData = await this.githubHelper.getPullRequest(this.pull_number);
+
+
+    /**
+     * Prepare PR details to be used in AI Helper.
+     */
+    const prDetails = {
+        prTitle: pullRequestData.title,
+        prDescription: pullRequestData.body,
+    };
+
+    const aiHelper = new AiHelper(openaiApiKey, prDetails);
+
+
+    const reviewer = new PullRequestReviewer(owner, repo, pull_number, githubHelper, aiHelper);
+
+
+    switch (actionContext) {
+        case 'CHECK_SHORTCODE':
+            await reviewer.checkShortCode().catch(error => console.error(error));
+            break;
+        default:
+            await reviewer.reviewPullRequest(pullRequestData).catch(error => console.error(error));
+    }
+
+
 } catch (error) {
     core.error(error.message);
 }

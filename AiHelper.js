@@ -419,6 +419,90 @@ class AiHelper {
         });
     }
 
+    async getPrSummary(prTitle, prDiff) {
+        const systemPrompt = `
+            Write a clear and concise summary for a pull request to help the reviewer understand the code changes effectively.
+
+            You will be provided with:
+            - A pull request code diff
+            - PR title
+            
+            The task is to create a summary that captures the purpose of these changes, why they are necessary, and any specific details that might help the reviewer understand the context.
+            
+            # Steps
+            1. **Understand the Context**: Analyze the PR title and commit comments to understand the broad goal and motivation of the changes.
+            2. **Summarize Code Changes**: Review the code diff briefly and identify the most important changes. Summarize the types of changes—are they bug fixes, feature additions, refactoring, improvement, or other?
+            3. **Highlight Key Changes**: Note the main components or files that have been modified, and briefly describe what the changes are intended to do.
+            4. **Include Justification and Risks**: Mention why these changes are needed, and if relevant, mention anything that may impact backward compatibility or notable dependencies (if present).
+            5. **Ensure Reviewer Clarity**: Make sure the summary covers important points that the reviewer should not miss, such as any testing that should be done, particular areas to focus on, and anything else relevant to the review.
+            
+            # Output Format
+            Provide a one to three paragraph summary, formatted as follows:
+            - **Main Purpose**: Briefly describe the purpose and goal of the pull request.
+            - **Key Changes**: Summarize the main changes made in the code, such as the files modified and the types of modifications (e.g., bug fix, new feature).
+            - **Additional Notes**: Any noteworthy details that help clarify the change's impact or how it should be reviewed (e.g., performance considerations, potential side effects, special testing instructions).
+            
+            # Examples
+            
+            **Example 1:**
+            
+            **Main Purpose**: This pull request improves performance in the data parsing module by optimizing looping logic.
+            
+            **Key Changes**: 
+            - Refactored the \`parseData()\` function in \`parser.py\` to a new asynchronous approach.
+            - Added tests in \`test_parser.py\` to ensure the parsing results remain accurate.
+            - Updated related documentation/comments for code maintainability.
+            
+            **Additional Notes**: 
+            - Reviewers, please focus on the \`parseData()\` function changes and new test cases to verify accuracy and performance gains. 
+            - Make sure to measure the performance boost on larger datasets during testing.
+            
+            **Example 2:**
+            
+            **Main Purpose**: This PR introduces a new feature allowing users to add multiple tags to their posts.
+            
+            **Key Changes**:
+            - Modified \`post_model.py\` to add a new \`tags\` attribute supporting an array of strings.
+            - Updated UI components in \`post_editor.vue\` to allow users to add and visualize multiple tags.
+            - Added unit test coverage for edge cases involving tag input.
+            
+            **Additional Notes**: 
+            - Please pay special attention to the new methods handling tag validation, and note that there may be a slight impact on database queries due to additional joins.
+            
+            # Notes
+            - Focus on providing a concise summary that emphasizes clarity and highlights what is most important for a new reviewer.
+            - Avoid highly technical language that might require deeper code familiarity unless absolutely required.`;
+
+        const userPrompt = `
+            PR Diff:
+            
+            \`\`\`
+            ${prDiff}
+            \`\`\`   
+            
+            PR title:
+            
+            \`\`\`
+            ${prTitle}
+            \`\`\`
+            
+            `;
+
+        const response = await this.openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+            ],
+            temperature: 1,
+            top_p: 1,
+            max_tokens: 2000,
+        });
+
+        return response.choices[0].message.content
+
+
+    }
 
 
 }

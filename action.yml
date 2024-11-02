@@ -32,6 +32,10 @@ inputs:
     description: 'Paths to exclude from review (comma-separated, e.g., "test/,docs/")'
     required: false
     default: "node_modules/,vendor/,assets/css/minified/,assets/js/minified/"
+  ACTION_CONTEXT:
+    description: 'Review context (e.g., "CHECK_SHORTCODE")'
+    required: false
+    default: ""
 runs:
   using: "node20"
   main: "dist/bundle.js"

@@ -5,12 +5,31 @@ on:
     types:
       - opened
       - synchronize
-permissions: write-all
+      - edited
+
+permissions:
+  contents: write
+
 jobs:
-  review:
+  pr_body_update:
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && github.event.changes.body }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: AI Code Reviewer for PR Body Update
+        uses: brainstormforce/pull-request-reviewer@master-v2.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACTION_CONTEXT: "CHECK_SHORTCODE"
+
+  review:
+    if: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: AI Code Reviewer
@@ -24,3 +43,8 @@ jobs:
           EXCLUDE_EXTENSIONS: "md, yml, lock"
           INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
           EXCLUDE_PATHS: "node_modules/,vendor/"
+
+
+
+
+

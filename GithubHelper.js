@@ -26,6 +26,35 @@ class GitHubHelper {
         }
     }
 
+    async getPullRequestDiff(prNumber) {
+        try {
+            const {data: prData} = await this.octokit.rest.pulls.get({
+                owner: this.owner,
+                repo: this.repo,
+                pull_number: prNumber,
+                mediaType: {
+                    format: "diff"
+                }
+            });
+            return prData;
+        } catch (error) {
+            core.error(error.message);
+        }
+    }
+
+    async updatePullRequestBody(body) {
+        try {
+            const response = await this.octokit.pulls.update({
+                owner,
+                repo,
+                pull_number,
+                body
+            });
+        } catch (error) {
+            core.error(error.message);
+        }
+    }
+
     async listFiles(prNumber) {
         try {
             const {data: changedFiles} = await this.octokit.rest.pulls.listFiles({

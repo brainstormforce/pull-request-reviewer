@@ -7,29 +7,32 @@ on:
 permissions: write-all
 
 jobs:
-  code-review:
+  CHECK_SHORTCODE:
+    if: ${{ github.event.action == 'edited' && github.event.changes.body }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set Action Context
-        id: set_context
-        run: |
-          echo "CONTEXT=$(
-            if [[ '${{ github.event.action }}' == 'edited' && '${{ github.event.changes.body }}' != null ]]; then
-              echo 'CHECK_SHORTCODE';
-            else
-              echo 'CODE_REVIEW';
-            fi
-          )" >> $GITHUB_ENV
-
-      - name: AI Code Reviewer
+      - name: WRITE PR SUMMARY
         uses: brainstormforce/pull-request-reviewer@master-v2.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ACTION_CONTEXT: ${{ env.CONTEXT }}
+          ACTION_CONTEXT: 'CHECK_SHORTCODE'
+
+  CODE REVIEW:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: AI CODE REVIEW
+        uses: brainstormforce/pull-request-reviewer@master-v2.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACTION_CONTEXT: "CODE_REVIEW"
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}

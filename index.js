@@ -136,6 +136,10 @@ async function main() {
         const aiHelper = new AiHelper(openaiApiKey, prDetails);
         const reviewer = new PullRequestReviewer(owner, repo, pull_number, githubHelper, aiHelper);
 
+        core.info('--------------------------------------');
+        core.info('Action Context: ' + actionContext);
+        core.info('--------------------------------------');
+
         switch (actionContext) {
             case 'CHECK_SHORTCODE':
                 await reviewer.checkShortCode().catch(error => console.error(error));

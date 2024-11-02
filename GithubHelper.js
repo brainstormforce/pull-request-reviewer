@@ -20,6 +20,7 @@ class GitHubHelper {
                 repo: this.repo,
                 pull_number: prNumber,
             });
+            core.info(`PR Data: ${JSON.stringify(prData)}`);
             return prData;
         } catch (error) {
             core.error(error.message);

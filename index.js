@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { GitHub, context } from "@actions/github";
 import * as core from "@actions/core";

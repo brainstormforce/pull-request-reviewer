@@ -140,8 +140,12 @@ async function main() {
             case 'CHECK_SHORTCODE':
                 await reviewer.checkShortCode().catch(error => console.error(error));
                 break;
-            default:
+            case 'CODE_REVIEW':
                 await reviewer.reviewPullRequest(pullRequestData).catch(error => console.error(error));
+                break;
+            default:
+                core.warning('Invalid action context. Exiting the process.');
+
         }
     } catch (error) {
         core.error(error.message);

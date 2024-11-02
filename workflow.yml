@@ -2,48 +2,37 @@ name: BSF Code Reviewer
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - edited
+    types: [opened, synchronize, edited]
 
 permissions: write-all
 
 jobs:
-  pr_body_update:
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && github.event.changes.body }}
+  code-review:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: AI Code Reviewer for PR Body Update
-        uses: brainstormforce/pull-request-reviewer@master-v2.1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ACTION_CONTEXT: "CHECK_SHORTCODE"
-
-  review:
-    if: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Set Action Context
+        id: set_context
+        run: |
+          echo "CONTEXT=$(
+            if [[ '${{ github.event.action }}' == 'edited' && '${{ github.event.changes.body }}' != null ]]; then
+              echo 'CHECK_SHORTCODE';
+            else
+              echo 'CODE_REVIEW';
+            fi
+          )" >> $GITHUB_ENV
 
       - name: AI Code Reviewer
         uses: brainstormforce/pull-request-reviewer@master-v2.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACTION_CONTEXT: ${{ env.CONTEXT }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
           JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
           EXCLUDE_EXTENSIONS: "md, yml, lock"
           INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
           EXCLUDE_PATHS: "node_modules/,vendor/"
-
-
-
-
-

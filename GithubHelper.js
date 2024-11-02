@@ -11,16 +11,13 @@ class GitHubHelper {
 
     async getPullRequest(prNumber) {
         try {
-            core.info(`Owner: ${this.owner}`);
-            core.info(`Repo: ${this.repo}`);
-            core.info(`Pull Number: ${prNumber}`);
 
             const { data: prData } = await this.octokit.rest.pulls.get({
                 owner: this.owner,
                 repo: this.repo,
                 pull_number: prNumber,
             });
-            core.info(`PR Data: ${JSON.stringify(prData)}`);
+
             return prData;
         } catch (error) {
             core.error(error.message);

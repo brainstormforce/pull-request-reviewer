@@ -131,6 +131,12 @@ async function main() {
         const pullRequestData = await githubHelper.getPullRequest(pull_number);
 
 
+        core.info('Owner: ' + owner);
+        core.info('Repo: ' + repo);
+        core.info('Pull Number: ' + pull_number);
+        core.info('Github Token: ' + githubToken);
+
+
         core.info('Pull Request Data: ' + JSON.stringify(pullRequestData));
 
         const prDetails = {

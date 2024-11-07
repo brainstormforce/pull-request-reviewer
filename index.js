@@ -62,6 +62,13 @@ class PullRequestReviewer {
             }
         };
 
+        let prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
+
+        // Check the count of comments by counting only if user.id = 41898282
+        prComments = prComments.filter(comment => comment.user.id === 41898282);
+
+        core.info("Bot Comments: " + prComments.length);
+
         try {
             if (pullRequestData.review_comments > 0) {
                 core.info("Pull Request has review comments. Skipping the review.");
@@ -70,7 +77,7 @@ class PullRequestReviewer {
             }
 
             const reviewableFiles = await this.getReviewableFiles();
-            let prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
+
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
             await checkApprovalStatus();
 

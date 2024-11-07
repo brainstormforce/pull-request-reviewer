@@ -265,6 +265,8 @@ class AiHelper {
                         core.info("Deleting parent comment! ❎");
                         await githubHelper.deleteComment(comment.in_reply_to_id);
                     }
+                } else {
+                    core.info("Comment not resolved, keeping! ✅");
                 }
             }
 

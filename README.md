@@ -11,6 +11,10 @@ The BSF AI Code Reviewer is an AI-powered code review system that leverages Open
 - Supports php, js & jsx files
 - Simple setup and seamless integration with GitHub workflows.
 
+# Shortcodes
+
+- **[BSF-PR-SUMMARY]** - This shortcode will display the summary of the PR review.
+
 ## Setup
 
 1. To use this GitHub Action, you need an OpenAI API key. If you don't have one, sign up for an API key

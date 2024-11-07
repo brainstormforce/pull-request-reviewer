@@ -151,7 +151,7 @@ async function main() {
         const isApproved = prReviews.some(review => review.state === 'APPROVED')
 
         core.info('--------------------------------------');
-        core.info('PR Reviews: ' + approvedReviews);
+        core.info('PR Reviews: ' + isApproved);
         core.info('--------------------------------------');
 
         process.exit(0)

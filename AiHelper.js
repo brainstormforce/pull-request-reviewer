@@ -23,11 +23,7 @@ class AiHelper {
             ${commentText}
         `;
 
-
-        const response = await this.openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: "system", content: `
+        const systemPrompt = `
                     Review a pull request (PR) diff and accompanying comment to determine if the comment has been resolved.
                     Strictly check the code changes to ensure that the comment has been addressed effectively.
                     
@@ -36,8 +32,17 @@ class AiHelper {
                     2. **Analyze the PR Diff**: Examine the PR diff to identify changes that have been implemented. Look for specific lines, functions, or logic that relate to the comment.
                     3. **Compare with Comment**: Determine if the changes in the PR diff adequately address the comment. Consider if the solution aligns with the comment’s objectives.
                     4. **Conclusion**: Clearly state whether the comment is resolved or not.
-         
-                ` },
+                `
+
+        core.info('--------------------------------------');
+        core.info('User Prompt: ' + userPrompt);
+        core.info('System Prompt: ' + systemPrompt);
+        core.info('--------------------------------------');
+
+        const response = await this.openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt },
             ],
             response_format: {

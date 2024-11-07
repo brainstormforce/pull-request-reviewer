@@ -85,6 +85,21 @@ class GitHubHelper {
         }
     }
 
+    async listReviews(pull_number) {
+
+        try {
+            const { data: prReviews } = await this.octokit.rest.pulls.listReviews({
+                owner: this.owner,
+                repo: this.repo,
+                pull_number,
+            });
+            return prReviews;
+        } catch (error) {
+            core.error(error.message);
+            throw error;
+        }
+    }
+
     async createReviewComment(commit_id, side, line, path, body) {
         try {
             await this.octokit.rest.pulls.createReviewComment({

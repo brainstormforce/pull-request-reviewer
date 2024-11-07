@@ -65,9 +65,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ACTION_CONTEXT: "CODE_REVIEW"
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
-          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
           EXCLUDE_EXTENSIONS: "md, yml, lock"
           INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
           EXCLUDE_PATHS: "node_modules/,vendor/"

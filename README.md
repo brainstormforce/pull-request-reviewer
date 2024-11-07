@@ -36,7 +36,7 @@ permissions: write-all
 
 jobs:
   CHECK_SHORTCODE:
-    if: ${{ github.event.action == 'edited' || contains(github.event.pull_request.body, '[BSF-PR-SUMMARY]') }}
+    if: contains(github.event.pull_request.body, '[BSF-PR-SUMMARY]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -54,6 +54,7 @@ jobs:
 
   CODE_REVIEW:
     needs: CHECK_SHORTCODE
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -68,3 +69,4 @@ jobs:
           EXCLUDE_EXTENSIONS: "md, yml, lock"
           INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
           EXCLUDE_PATHS: "node_modules/,vendor/"
+```

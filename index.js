@@ -66,6 +66,8 @@ class PullRequestReviewer {
                         "\n" +
                         "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
                 }
+            } else {
+                core.info("PR is already approved. Skipping the approval process. ✅");
             }
         };
 

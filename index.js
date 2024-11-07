@@ -42,7 +42,7 @@ class PullRequestReviewer {
     }
 
 
-    async reviewPullRequest(pullRequestData) {
+    async reviewPullRequest() {
 
         const checkApprovalStatus = async () => {
 
@@ -67,11 +67,9 @@ class PullRequestReviewer {
         // Check the count of comments by counting only if user.id = 41898282
         prComments = prComments.filter(comment => comment.user.id === 41898282);
 
-        core.info("Bot Comments: " + prComments.length);
-
         try {
-            if (pullRequestData.review_comments > 0) {
-                core.info("Pull Request has review comments. Skipping the review.");
+            if (prComments.length > 0) {
+                core.info("The pull request has review comments. Skipping further review; please resolve the comments first. ❎");
                 await checkApprovalStatus();
                 process.exit(0);
             }
@@ -165,7 +163,7 @@ async function main() {
                 await reviewer.checkShortCode().catch(error => console.error(error));
                 break;
             case 'CODE_REVIEW':
-                await reviewer.reviewPullRequest(pullRequestData).catch(error => console.error(error));
+                await reviewer.reviewPullRequest().catch(error => console.error(error));
                 break;
             default:
                 core.warning('Invalid action context. Exiting the process. ❎');

@@ -48,6 +48,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ACTION_CONTEXT: 'CHECK_SHORTCODE'
+          EXCLUDE_EXTENSIONS: "md, yml, lock"
+          INCLUDE_EXTENSIONS: "php, js, jsx, ts, tsx, css, scss, html, json"
+          EXCLUDE_PATHS: "node_modules/,vendor/"
 
   CODE_REVIEW:
     needs: CHECK_SHORTCODE

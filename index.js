@@ -65,8 +65,8 @@ class PullRequestReviewer {
             const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
             let prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
-
             await checkApprovalStatus();
+
         } catch (error) {
             core.error(error.message);
         }

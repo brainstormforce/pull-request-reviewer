@@ -34,11 +34,6 @@ class AiHelper {
                     4. **Conclusion**: Clearly state whether the comment is resolved or not.
                 `
 
-        core.info('--------------------------------------');
-        core.info('User Prompt: ' + userPrompt);
-        core.info('System Prompt: ' + systemPrompt);
-        core.info('--------------------------------------');
-
         const response = await this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
@@ -271,7 +266,7 @@ class AiHelper {
                         await githubHelper.deleteComment(comment.in_reply_to_id);
                     }
                 } else {
-                    core.info("Comment not resolved, keeping! ✅");
+                    core.info("Comment not resolved, keeping it! ✅ You can manually resolve or delete the comment after making the changes.");
                 }
             }
 

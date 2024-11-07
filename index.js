@@ -150,7 +150,7 @@ async function main() {
         const prReviews = await githubHelper.listReviews(pull_number);
 
         core.info('--------------------------------------');
-        core.info('PR Reviews: ' + prReviews);
+        core.info('PR Reviews: ' + JSON.stringify(prReviews));
         core.info('--------------------------------------');
 
         process.exit(0)

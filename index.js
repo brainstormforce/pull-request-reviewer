@@ -46,7 +46,7 @@ class PullRequestReviewer {
 
         const checkApprovalStatus = async () => {
 
-            const prReviews = await this.githubHelper.listReviews(pull_number);
+            const prReviews = await this.githubHelper.listReviews(this.pull_number);
             const isPrAlreadyApproved = prReviews.some(review => review.state === 'APPROVED')
 
 

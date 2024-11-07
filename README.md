@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: WRITE PR SUMMARY
-        uses: brainstormforce/pull-request-reviewer@master-v2.2
+        uses: brainstormforce/pull-request-reviewer@master
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

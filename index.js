@@ -1,5 +1,5 @@
 import axios from "axios";
-import { GitHub, context } from "@actions/github";
+import {GitHub, context} from "@actions/github";
 import * as core from "@actions/core";
 
 import AiHelper from "./AiHelper.js";
@@ -46,19 +46,25 @@ class PullRequestReviewer {
 
         const checkApprovalStatus = async () => {
 
-            const prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
-            let existingPrComments = prComments.map(comment => {
-                return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
-            }).filter(Boolean);
+            const prReviews = await githubHelper.listReviews(pull_number);
+            const isPrAlreadyApproved = prReviews.some(review => review.state === 'APPROVED')
 
-            let isApproved = await this.aiHelper.checkApprovalStatus(existingPrComments);
-            core.info("PR Approval Status: " + isApproved);
+            if (!isPrAlreadyApproved) {
 
-            if (isApproved) {
-                await this.githubHelper.createReview(this.pull_number, "APPROVE", "\n" +
-                    "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
-                    "\n" +
-                    "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
+                core.info("Checking the approval status of the PR...");
+                const prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
+                let existingPrComments = prComments.map(comment => {
+                    return comment.body.match(/What:(.*)(?=Why:)/s)?.[1]?.trim();
+                }).filter(Boolean);
+
+                let isApproved = await this.aiHelper.checkApprovalStatus(existingPrComments);
+
+                if (isApproved) {
+                    await this.githubHelper.createReview(this.pull_number, "APPROVE", "\n" +
+                        "Great job! ✅ The PR looks solid with no security or performance issues.\n" +
+                        "\n" +
+                        "Please make sure to resolve any remaining comments if any. **Approved** :thumbsup:");
+                }
             }
         };
 
@@ -68,14 +74,8 @@ class PullRequestReviewer {
         prComments = prComments.filter(comment => comment.user.id === 41898282);
 
         try {
-            // if (prComments.length > 0) {
-            //     core.info("The pull request has review comments. Skipping further review; please resolve the comments first. ❎");
-            //     await checkApprovalStatus();
-            //     process.exit(0);
-            // }
 
             const reviewableFiles = await this.getReviewableFiles();
-
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
             await checkApprovalStatus();
 
@@ -146,14 +146,6 @@ async function main() {
         const githubHelper = new GithubHelper(owner, repo, pull_number, githubToken);
         const pullRequestData = await githubHelper.getPullRequest(pull_number);
 
-
-        const prReviews = await githubHelper.listReviews(pull_number);
-        const isApproved = prReviews.some(review => review.state === 'APPROVED')
-
-        core.info('--------------------------------------');
-        core.info('PR Reviews: ' + isApproved);
-        core.info('--------------------------------------');
-        process.exit(0)
 
         const prDetails = {
             prTitle: pullRequestData.title,

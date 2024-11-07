@@ -80,6 +80,8 @@ class PullRequestReviewer {
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
             await checkApprovalStatus();
 
+            core.info("Code review completed successfully! 🎉");
+
         } catch (error) {
             core.error(error.message);
         }

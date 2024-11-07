@@ -105,7 +105,10 @@ class PullRequestReviewer {
 
         const reviewableFiles = await this.getReviewableFiles();
 
-        core.info( JSON.stringify(reviewableFiles) );
+        // Get the diff from the patch by appending filename like filename \n Diff \n\n
+        const prDiff = reviewableFiles.map(file => file.filename + '\n' + file.patch + '\n\n').join('\n');
+
+        core.info( prDiff );
         process.exit(0)
 
         const prDescription = prData.body;

@@ -68,11 +68,11 @@ class PullRequestReviewer {
         prComments = prComments.filter(comment => comment.user.id === 41898282);
 
         try {
-            if (prComments.length > 0) {
-                core.info("The pull request has review comments. Skipping further review; please resolve the comments first. ❎");
-                await checkApprovalStatus();
-                process.exit(0);
-            }
+            // if (prComments.length > 0) {
+            //     core.info("The pull request has review comments. Skipping further review; please resolve the comments first. ❎");
+            //     await checkApprovalStatus();
+            //     process.exit(0);
+            // }
 
             const reviewableFiles = await this.getReviewableFiles();
 

@@ -153,7 +153,6 @@ async function main() {
         core.info('--------------------------------------');
         core.info('PR Reviews: ' + isApproved);
         core.info('--------------------------------------');
-
         process.exit(0)
 
         const prDetails = {

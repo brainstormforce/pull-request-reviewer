@@ -105,9 +105,10 @@ class PullRequestReviewer {
 
         const reviewableFiles = await this.getReviewableFiles();
 
-        // Get the diff from the patch by appending filename like filename \n Diff \n\n
-        const prDiff = reviewableFiles.map(file => file.filename + '\n' + file.patch + '\n\n').join('\n');
-
+        // Get the diff from the patch by appending filename like Filename: filename \n Diff: diff \n\n
+        const prDiff = reviewableFiles.map(file => {
+            return `Filename: ${file.filename}\nDiff: ${file.patch}\n\n`;
+        }).join('');
         core.info( prDiff );
         process.exit(0)
 

@@ -36,6 +36,11 @@ class PullRequestReviewer {
         const [includeExtensions, excludeExtensions, includePaths, excludePaths] =
             ['INCLUDE_EXTENSIONS', 'EXCLUDE_EXTENSIONS', 'INCLUDE_PATHS', 'EXCLUDE_PATHS'].map(getInputArray);
 
+        core.info('Include Extensions: ' + includeExtensions);
+        core.info('Exclude Extensions: ' + excludeExtensions);
+        core.info('Include Paths: ' + includePaths);
+        core.info('Exclude Paths: ' + excludePaths);
+
         const changedFiles = await this.githubHelper.listFiles(this.pull_number);
         return changedFiles.filter(file => isMatch(file.filename.replace(/\\/g, '/'), includeExtensions, excludeExtensions, includePaths, excludePaths));
     }

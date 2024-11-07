@@ -105,7 +105,7 @@ class PullRequestReviewer {
 
         const reviewableFiles = await this.getReviewableFiles();
 
-        core.info(reviewableFiles);
+        core.info( JSON.stringify(reviewableFiles) );
         process.exit(0)
 
         const prDescription = prData.body;

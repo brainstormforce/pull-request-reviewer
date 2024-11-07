@@ -14,27 +14,34 @@ class PullRequestReviewer {
         this.aiHelper = aiHelper;
     }
 
-    async reviewPullRequest(pullRequestData) {
-        const stringToArray = (inputString, delimiter = ',') =>
-            inputString.split(delimiter).map(item => item.trim());
 
-        const includeExtensions = stringToArray(core.getInput('INCLUDE_EXTENSIONS'));
-        const excludeExtensions = stringToArray(core.getInput('EXCLUDE_EXTENSIONS'));
-        const includePaths = stringToArray(core.getInput('INCLUDE_PATHS'));
-        const excludePaths = stringToArray(core.getInput('EXCLUDE_PATHS'));
+    async getReviewableFiles() {
+        const stringToArray = (input, delimiter = ',') =>
+            input ? input.split(delimiter).map(item => item.trim()) : [];
 
-        const getReviewableFiles = (changedFiles, includeExtensionsArray, excludeExtensionsArray, includePathsArray, excludePathsArray) => {
-            const isFileToReview = (filename) => {
-                const isIncludedExtension = includeExtensionsArray.length === 0 || includeExtensionsArray.some(ext => filename.endsWith(ext));
-                const isExcludedExtension = excludeExtensionsArray.length > 0 && excludeExtensionsArray.some(ext => filename.endsWith(ext));
-                const isIncludedPath = includePathsArray.length === 0 || includePathsArray.some(path => filename.startsWith(path));
-                const isExcludedPath = excludePathsArray.length > 0 && excludePathsArray.some(path => filename.startsWith(path));
+        const isMatch = (filename, includeExtensions, excludeExtensions, includePaths, excludePaths) => {
+            const matchesExtension = (extensions) => extensions.some(ext => filename.endsWith(ext));
+            const matchesPath = (paths) => paths.some(path => filename.startsWith(path));
 
-                return isIncludedExtension && !isExcludedExtension && isIncludedPath && !isExcludedPath;
-            };
+            const isIncludedExtension = !includeExtensions.length || matchesExtension(includeExtensions);
+            const isExcludedExtension = excludeExtensions.length && matchesExtension(excludeExtensions);
+            const isIncludedPath = !includePaths.length || matchesPath(includePaths);
+            const isExcludedPath = excludePaths.length && matchesPath(excludePaths);
 
-            return changedFiles.filter(file => isFileToReview(file.filename.replace(/\\/g, '/')));
+            return isIncludedExtension && !isExcludedExtension && isIncludedPath && !isExcludedPath;
         };
+
+        const getInputArray = (name) => stringToArray(core.getInput(name));
+
+        const [includeExtensions, excludeExtensions, includePaths, excludePaths] =
+            ['INCLUDE_EXTENSIONS', 'EXCLUDE_EXTENSIONS', 'INCLUDE_PATHS', 'EXCLUDE_PATHS'].map(getInputArray);
+
+        const changedFiles = await this.githubHelper.listFiles(this.pull_number);
+        return changedFiles.filter(file => isMatch(file.filename.replace(/\\/g, '/'), includeExtensions, excludeExtensions, includePaths, excludePaths));
+    }
+
+
+    async reviewPullRequest(pullRequestData) {
 
         const checkApprovalStatus = async () => {
 
@@ -61,8 +68,7 @@ class PullRequestReviewer {
                 process.exit(0);
             }
 
-            const changedFiles = await this.githubHelper.listFiles(this.pull_number);
-            const reviewableFiles = getReviewableFiles(changedFiles, includeExtensions, excludeExtensions, includePaths, excludePaths);
+            const reviewableFiles = await this.getReviewableFiles();
             let prComments = await this.githubHelper.getPullRequestComments(this.pull_number);
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
             await checkApprovalStatus();
@@ -96,7 +102,11 @@ class PullRequestReviewer {
     async checkShortCode() {
 
         const prData = await this.githubHelper.getPullRequest(this.pull_number);
-        const prDiff = await this.githubHelper.getPullRequestDiff(this.pull_number);
+
+        const reviewableFiles = await this.getReviewableFiles();
+
+        core.info(reviewableFiles);
+        process.exit(0)
 
         const prDescription = prData.body;
         const prTitle = prData.title;

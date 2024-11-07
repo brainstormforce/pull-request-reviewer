@@ -75,13 +75,10 @@ class PullRequestReviewer {
         prComments = prComments.filter(comment => comment.user.id === 41898282);
 
         try {
-
             const reviewableFiles = await this.getReviewableFiles();
             await this.aiHelper.executeCodeReview(reviewableFiles, prComments, this.githubHelper);
             await checkApprovalStatus();
-
             core.info("Code review completed successfully! 🎉");
-
         } catch (error) {
             core.error(error.message);
         }

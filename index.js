@@ -111,7 +111,7 @@ class PullRequestReviewer {
 
             core.info("PR Summary added to the PR Description 🎉");
         } else {
-            core.info('No shortcode! Skipping the process.');
+            core.info('No shortcode! Skipping the process. ❎');
         }
     }
 }
@@ -148,7 +148,7 @@ async function main() {
                 await reviewer.reviewPullRequest(pullRequestData).catch(error => console.error(error));
                 break;
             default:
-                core.warning('Invalid action context. Exiting the process.');
+                core.warning('Invalid action context. Exiting the process. ❎');
 
         }
     } catch (error) {

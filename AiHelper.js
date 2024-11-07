@@ -237,7 +237,7 @@ class AiHelper {
         const prComments = [];
         // Loop to each file to send completion openai request
         for (const file of simpleChangedFiles) {
-            core.info('\n\nAnalysing file: ' + file.filename);
+            core.info('\n\nAnalysing file: ' + file.filename) + '🔍';
 
             // Get the comments in this file
             const comments = existingPrComments.filter(comment => comment.path === file.filename);
@@ -258,11 +258,11 @@ class AiHelper {
 
                 const resolved = await this.checkCommentResolved(file.patch, tmpCommentText);
                 if(resolved.status === 'Resolved') {
-                    core.info("Comment resolved, deleting!");
+                    core.info("Comment resolved, deleting! ❎");
                     await githubHelper.deleteComment(comment.id);
                     // check comment has in_reply_to_id and delete it
                     if(comment.in_reply_to_id) {
-                        core.info("Deleting parent comment!");
+                        core.info("Deleting parent comment! ❎");
                         await githubHelper.deleteComment(comment.in_reply_to_id);
                     }
                 }
@@ -286,13 +286,13 @@ class AiHelper {
                 const {what, why, how} = review_comment;
 
                 if( existingPrComments.length > 0 && this.checkSimilarComment(existingPrComments, what ) ) {
-                    core.info("Comment already exists, skipping!");
+                    core.info("Comment already exists, skipping ❎");
                     continue;
                 }
 
                 await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n`);
 
-                core.info("Comment added successfully!");
+                core.info("Comment added ✅");
             }
         }
     }

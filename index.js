@@ -148,10 +148,10 @@ async function main() {
 
 
         const prReviews = await githubHelper.listReviews(pull_number);
-        const approvedReviews = prReviews.filter(review => review.state === 'APPROVED')
+        const isApproved = prReviews.some(review => review.state === 'APPROVED')
 
         core.info('--------------------------------------');
-        core.info('PR Reviews: ' + JSON.stringify(approvedReviews));
+        core.info('PR Reviews: ' + approvedReviews);
         core.info('--------------------------------------');
 
         process.exit(0)

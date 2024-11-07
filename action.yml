@@ -23,15 +23,15 @@ inputs:
   INCLUDE_EXTENSIONS:
     description: 'File extensions to include in the review (comma-separated, e.g., ".py,.js,.html")'
     required: false
-    default: "php, js, jsx, ts, tsx, css, scss, html, json"
+    default: "php, js, jsx, ts, tsx, css, scss, html"
   EXCLUDE_EXTENSIONS:
     description: 'File extensions to exclude from the review (comma-separated)'
     required: false
-    default: "md, yml, lock"
+    default: "md, yml, lock, json, xml, txt, csv, log, sql, env, gitignore, gitattributes, gitmodules, gitkeep, git, gitconfig"
   EXCLUDE_PATHS:
     description: 'Paths to exclude from review (comma-separated, e.g., "test/,docs/")'
     required: false
-    default: "node_modules/,vendor/,assets/css/minified/,assets/js/minified/"
+    default: "node_modules/,vendor/,assets/css/minified/,assets/js/minified/,assets/build/, dist/, build/, public/, .next/, .nuxt/, .cache/, .git/, .github/, .idea/, .vscode/, .gitignore, .gitattributes, .gitmodules, .gitkeep, .gitconfig"
   ACTION_CONTEXT:
     description: 'Review context (e.g., "CHECK_SHORTCODE")'
     required: false

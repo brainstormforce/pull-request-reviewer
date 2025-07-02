@@ -3,10 +3,12 @@ const { OpenAI } = require('openai');
 const core = require("@actions/core");
 class AiHelper {
     prDetails;
+    instructions;
 
-    constructor(apiKey, prDetails) {
+    constructor(apiKey, prDetails, instructions) {
         this.openai = new OpenAI({ apiKey });
         this.prDetails = prDetails;
+        this.instructions = instructions;
     }
 
     async checkCommentResolved(patch, commentText) {
@@ -285,7 +287,7 @@ class AiHelper {
         for (const comments of prComments) {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
-                const {pointer, severity, what, why, how} = review_comment;
+                const {pointer, severity, priority, what, why, how} = review_comment;
 
                 if( existingPrComments.length > 0 && this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping ❎");
@@ -293,7 +295,7 @@ class AiHelper {
                 }
 
                 // Compose the comment with pointer and severity at the top
-                const commentBody = `${pointer} **[${severity}]**\n\n**What:** ${what}\n\n**Why:** ${why}\n\n**How:** ${how}`;
+                const commentBody = `${pointer} **[${severity} | ${priority}]**\n\n**What:** ${what}\n\n**Why:** ${why}\n\n**How:** ${how}`;
 
                 await githubHelper.createReviewComment(commit_id, side, line, path, commentBody);
 
@@ -330,22 +332,32 @@ class AiHelper {
         10. **Each comment must include:**
            - Pointer (⚠️ or 🛠️) at the top
            - Severity (High/Medium/Low)
+           - Priority (High/Medium/Low)
            - What: The issue
            - Why: Why it matters
            - How: A clear, practical suggested solution (with code if possible)
         
-        You can use PR title and description for more context.
+        You can use PR title, description and instructions for more context.
         
         #PR title:
-        \`\`\`
+        ```
         ${this.prDetails.prTitle}
-        \`\`\`
+        ```
         
         #PR description:
-        \`\`\`
+        ```
         ${this.prDetails.prDescription}
-        \`\`\`
+        ```
         `;
+
+        if (this.instructions) {
+            systemPrompt += `
+#Instructions:
+```
+${this.instructions}
+```
+`;
+        }
 
         return this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
@@ -395,6 +407,10 @@ class AiHelper {
                                                     "type": "string",
                                                     "description": "Severity of the issue: High, Medium, or Low"
                                                 },
+                                                "priority": {
+                                                    "type": "string",
+                                                    "description": "Priority of the issue: High, Medium, or Low"
+                                                },
                                                 "what": {
                                                     "type": "string",
                                                     "description": "Describes the issue that the reviewer has identified in the code snippet. It should be specific, actionable, and focused on a single problem."
@@ -411,6 +427,7 @@ class AiHelper {
                                             "required": [
                                                 "pointer",
                                                 "severity",
+                                                "priority",
                                                 "what",
                                                 "why",
                                                 "how"

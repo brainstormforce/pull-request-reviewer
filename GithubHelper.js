@@ -144,6 +144,20 @@ class GitHubHelper {
             throw error;
         }
     }
+
+    async getFileContent(path) {
+        try {
+            const { data } = await this.octokit.rest.repos.getContent({
+                owner: this.owner,
+                repo: this.repo,
+                path,
+            });
+            return Buffer.from(data.content, 'base64').toString();
+        } catch (error) {
+            core.error(error.message);
+            return null;
+        }
+    }
 }
 
 module.exports = GitHubHelper;

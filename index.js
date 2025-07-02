@@ -153,7 +153,9 @@ async function main() {
             prDescription: pullRequestData.body,
         };
 
-        const aiHelper = new AiHelper(openaiApiKey, prDetails);
+        const instructions = await githubHelper.getFileContent('instructions.md');
+
+        const aiHelper = new AiHelper(openaiApiKey, prDetails, instructions);
         const reviewer = new PullRequestReviewer(owner, repo, pull_number, githubHelper, aiHelper);
 
         core.info('--------------------------------------');

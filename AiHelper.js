@@ -3,10 +3,12 @@ const { OpenAI } = require('openai');
 const core = require("@actions/core");
 class AiHelper {
     prDetails;
+    instructions;
 
-    constructor(apiKey, prDetails) {
+    constructor(apiKey, prDetails, instructions) {
         this.openai = new OpenAI({ apiKey });
         this.prDetails = prDetails;
+        this.instructions = instructions;
     }
 
     async checkCommentResolved(patch, commentText) {
@@ -285,14 +287,17 @@ class AiHelper {
         for (const comments of prComments) {
             for (const comment of comments) {
                 const {commit_id, side, line, path, review_comment} = comment;
-                const {what, why, how} = review_comment;
+                const {pointer, severity, priority, what, why, how} = review_comment;
 
                 if( existingPrComments.length > 0 && this.checkSimilarComment(existingPrComments, what ) ) {
                     core.info("Comment already exists, skipping ❎");
                     continue;
                 }
 
-                await githubHelper.createReviewComment(commit_id, side, line, path, `**What:** ${what}\n\n\n**Why:** ${why}\n\n\n**How:** ${how}\n\n`);
+                // Compose the comment with pointer and severity at the top
+                const commentBody = `${pointer} **[${severity} | ${priority}]**\n\n**What:** ${what}\n\n**Why:** ${why}\n\n**How:** ${how}`;
+
+                await githubHelper.createReviewComment(commit_id, side, line, path, commentBody);
 
                 core.info("Comment added ✅");
             }
@@ -307,34 +312,52 @@ class AiHelper {
         
         ## Ensure that the code is reviewed with emphasis on the following key areas:
         
-        - **Security**: Look for potential vulnerabilities such as SQL injection, XSS, CSRF, or insecure handling of data. Verify that proper authentication and authorization checks are implemented.
+        - **Security**: Look for potential vulnerabilities such as SQL injection, XSS, CSRF, or insecure handling of data. Verify that proper authentication and authorization checks are implemented. Focus on security issues relevant to the detected programming language (e.g., XSS for JavaScript, SQLi for PHP, etc.).
         - **Performance**: Identify any code that could impact the performance negatively. Check for resource-intensive operations, inefficient algorithms, or unnecessary complexity that could be simplified.
         - **Refactorization**: Evaluate the code for readability, maintainability, and adherence to coding standards. Suggest ways to improve the structure of the code to enhance future maintenance.
         - **Optimization**: Look for opportunities to optimize the code for speed and efficiency without sacrificing readability or security. Consider memory usage, execution time, and processing power.
         
         ## Review Steps
-        
         1. **Identify Language/Framework:** Identify the programming language and framework used in the code.
         2. **Review Diff:** Analyze changes line by line, noting additions/removals.
         3. **Check Efficiency:** Spot inefficiencies and suggest improvements.
         4. **Logic & Bugs:** Find logical errors or bugs; recommend fixes.
         5. **Security:** Identify vulnerabilities and suggest mitigations.
-        6 **Performance:** Detect bottlenecks; propose enhancements, use of built-in functions.
-        7. .**Avoid Non Impacting** STRICTLY Avoid giving feedback on non-impacting changes like formatting, comments, ensuring code quality, etc.
+        6. **Performance:** Detect bottlenecks; propose enhancements, use of built-in functions.
+        7. **STRICTLY Avoid** giving feedback on non-impacting changes like formatting, comments, or minor code style issues.
+        8. **Only provide comments that are actionable, relevant, and have a clear suggested solution.**
+        9. **For each issue, assign a severity (High, Medium, Low) and a pointer at the top:**
+           - ⚠️ Potential issue (for bugs, security, or performance)
+           - 🛠️ Refactor suggestion (for maintainability, readability, or optimization)
+        10. **Each comment must include:**
+           - Pointer (⚠️ or 🛠️) at the top
+           - Severity (High/Medium/Low)
+           - Priority (High/Medium/Low)
+           - What: The issue
+           - Why: Why it matters
+           - How: A clear, practical suggested solution (with code if possible)
         
-        You can use PR title and description for more context.
+        You can use PR title, description and instructions for more context.
         
         #PR title:
-        \`\`\`
+        ```
         ${this.prDetails.prTitle}
-        \`\`\`
+        ```
         
         #PR description:
-        \`\`\`
+        ```
         ${this.prDetails.prDescription}
-        \`\`\`    
-            
-            `;
+        ```
+        `;
+
+        if (this.instructions) {
+            systemPrompt += `
+#Instructions:
+```
+${this.instructions}
+```
+`;
+        }
 
         return this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
@@ -376,20 +399,35 @@ class AiHelper {
                                             "type": "object",
                                             "description": "The review comment that the reviewer has left on the code snippet. It should be specific, actionable, and focused on a single issue. It should also consider the developer’s perspective and provide constructive feedback that helps them understand the problem and improve their code quality.",
                                             "properties": {
+                                                "pointer": {
+                                                    "type": "string",
+                                                    "description": "Pointer at the top of the comment: either '⚠️ Potential issue' or '🛠️ Refactor suggestion'"
+                                                },
+                                                "severity": {
+                                                    "type": "string",
+                                                    "description": "Severity of the issue: High, Medium, or Low"
+                                                },
+                                                "priority": {
+                                                    "type": "string",
+                                                    "description": "Priority of the issue: High, Medium, or Low"
+                                                },
                                                 "what": {
                                                     "type": "string",
-                                                    "description": "Describes the issue that the reviewer has identified in the code snippet. It should be specific, actionable, and focused on a single problem. It should also consider the developer’s perspective and provide constructive feedback that helps them understand the issue and improve their code quality."
+                                                    "description": "Describes the issue that the reviewer has identified in the code snippet. It should be specific, actionable, and focused on a single problem."
                                                 },
                                                 "why": {
                                                     "type": "string",
-                                                    "description": "Explains why the issue is important and what the reviewer hopes to achieve by addressing it. It should provide context on the problem and explain how it aligns with the project’s goals, coding standards, or best practices. It should also consider the developer’s perspective and explain the benefits of making the change."
+                                                    "description": "Explains why the issue is important and what the reviewer hopes to achieve by addressing it."
                                                 },
                                                 "how": {
                                                     "type": "string",
-                                                    "description": "Provides a clear and concise explanation of how to fix the issue. It can include code snippets, links to documentation, or other resources that help the developer understand the problem and implement the suggested change. It should be detailed enough to guide the developer through the process but not so prescriptive that it stifles creativity or learning. It should also consider the developer’s level of expertise and provide additional context or explanations as needed."
+                                                    "description": "Provides a clear and concise explanation of how to fix the issue. It can include code snippets, links to documentation, or other resources."
                                                 }
                                             },
                                             "required": [
+                                                "pointer",
+                                                "severity",
+                                                "priority",
                                                 "what",
                                                 "why",
                                                 "how"

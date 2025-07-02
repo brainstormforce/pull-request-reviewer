@@ -1,0 +1,22 @@
+name: "Pull Request Reviewer"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run PR Reviewer
+        uses: ./
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ACTION_CONTEXT: 'CODE_REVIEW'
+          EXCLUDE_EXTENSIONS: 'lock'
+          INCLUDE_EXTENSIONS: 'php, js, jsx, ts, tsx, css, scss, html, json'
+          EXCLUDE_PATHS: 'node_modules/,vendor/,build/,dist/'
